@@ -1,4 +1,5 @@
 from typing import Optional
+from utils import GORA
 
 import torch
 
@@ -14,7 +15,7 @@ def __get_loss_fn(loss_fn: Optional[None, str] = None) -> torch.nn.modules.loss:
 
 class Model:
     def __init__(self) -> None:
-        self.model = None
+        self.model = GORA()
         raise NotImplementedError
 
     def load_pretrained_model(self) -> None:
