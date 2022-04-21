@@ -50,7 +50,19 @@ class Model:
         print(f'Training time: {end_time - start_time:.2f}s')
 
     def predict(self, test_input: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
+        # Set model in evaluation mode
+        self.model.eval()
+        # Predict on minibatches
+        denoised_output = torch.empty(test_input.shape).to(self.device)
+        with torch.no_grad():
+            for batch_idx in range(0, len(test_input), self.batch_size):
+                # Get minibatch
+                batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(self.device)
+                # Forward pass
+                output = self.model(batch_input)
+                # Save output
+                denoised_output[batch_idx:batch_idx + self.batch_size] = output
+        return denoised_output
 
     def __get_optimizer(self, lr: float = 1e-3) -> torch.optim.Optimizer:
         # Parameters are from paper 'Noise2Noise: Learning Image Restoration without
