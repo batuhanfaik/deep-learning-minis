@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, Tuple
 from utils import GORA
 
 import torch
 import time
+import os
 
 
 class Model:
@@ -15,12 +16,18 @@ class Model:
         self.loss_fn = self.__get_loss_fn().to(self.device)
         self.n_epochs = 100
         self.batch_size = 32
+        self.validate_every = 10
+        # Set data
+        self.data_path = '../miniproject_dataset/'
+        self.train_input, self.train_target = self.__get_data('train')
+        self.val_input, self.val_target = self.__get_data('val')
 
     def load_pretrained_model(self, ckpt_name: str = 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor) -> None:
+        print('Training...')
         # Set model in training mode
         self.model.train()
         # Training loop
@@ -30,8 +37,10 @@ class Model:
             # Minibatch loop
             for batch_idx in range(0, len(train_input), self.batch_size):
                 # Get minibatch
-                batch_input = train_input[batch_idx:batch_idx + self.batch_size].to(self.device)
-                batch_target = train_target[batch_idx:batch_idx + self.batch_size].to(self.device)
+                batch_input = train_input[batch_idx:batch_idx + self.batch_size].to(
+                    self.device)
+                batch_target = train_target[batch_idx:batch_idx + self.batch_size].to(
+                    self.device)
                 # Zero the gradients
                 self.optimizer.zero_grad()
                 # Forward pass
@@ -46,8 +55,34 @@ class Model:
                 if batch_idx % 10 == 9:
                     print(
                         f'\tBatch {batch_idx + 1} / {len(train_input)}: {loss.item():.4f}')
+            # Validate
+            if epoch % self.validate_every == self.validate_every - 1:
+                loss = self.validate(self.val_input, self.val_target)
+                print(f'\tValidation loss: {loss:.4f}')
+
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
+
+    def validate(self, test_input: torch.Tensor, test_target: torch.Tensor) -> float:
+        print('Validating...')
+        # Set model in evaluation mode
+        self.model.eval()
+        # Predict on minibatches
+        denoised_output = torch.empty(test_input.shape).to(self.device)
+        with torch.no_grad():
+            for batch_idx in range(0, len(test_input), self.batch_size):
+                # Get minibatch
+                batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
+                    self.device)
+                batch_target = test_target[batch_idx:batch_idx + self.batch_size].to(
+                    self.device)
+                # Forward pass
+                output = self.model(batch_input)
+                # Save output
+                denoised_output[batch_idx:batch_idx + self.batch_size] = output
+        # Compute loss
+        loss = self.loss_fn(denoised_output, test_target)
+        return loss.item()
 
     def predict(self, test_input: torch.Tensor) -> torch.Tensor:
         # Set model in evaluation mode
@@ -57,7 +92,8 @@ class Model:
         with torch.no_grad():
             for batch_idx in range(0, len(test_input), self.batch_size):
                 # Get minibatch
-                batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(self.device)
+                batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
+                    self.device)
                 # Forward pass
                 output = self.model(batch_input)
                 # Save output
@@ -82,3 +118,13 @@ class Model:
             return torch.nn.L1Loss()
         else:
             raise ValueError(f'Unknown loss function {loss_fn}')
+
+    def __get_data(self, data_type: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        if data_type == 'train':
+            return torch.load(os.path.join(self.data_path, 'train_data.pkl'),
+                              map_location=self.device)
+        elif data_type == 'val':
+            return torch.load(os.path.join(self.data_path, 'val_data.pkl'),
+                              map_location=self.device)
+        else:
+            raise ValueError(f'Unknown data type {data_type}')
