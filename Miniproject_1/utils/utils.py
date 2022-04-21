@@ -1,7 +1,7 @@
 import torch
 
 
-def psnr(denoised_image: torch.Tensor, original_image: torch.Tensor) -> float:
+def psnr(denoised_image: torch.Tensor, original_image: torch.Tensor) -> torch.Tensor:
     """
     Computes the PSNR between two images.
 
