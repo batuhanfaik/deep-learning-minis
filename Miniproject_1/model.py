@@ -16,8 +16,9 @@ class Model:
         self.n_epochs = 100
         self.batch_size = 32
 
-    def load_pretrained_model(self) -> None:
-        raise NotImplementedError
+    def load_pretrained_model(self, ckpt_name: str = 'bestmodel.pth') -> None:
+        print(f'Loading pretrained model from {ckpt_name}')
+        self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor) -> None:
         # Set model in training mode
