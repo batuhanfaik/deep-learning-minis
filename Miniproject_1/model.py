@@ -111,7 +111,7 @@ class Model:
         )
 
     @staticmethod
-    def __get_loss_fn(loss_fn: Optional[None, str] = None) -> torch.nn.modules.loss:
+    def __get_loss_fn(loss_fn: Optional[str] = None) -> torch.nn.modules.loss:
         if loss_fn is None or loss_fn == 'l2':
             return torch.nn.MSELoss()
         elif loss_fn == 'l1':
