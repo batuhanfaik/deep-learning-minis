@@ -8,17 +8,18 @@ import time
 class Model:
     def __init__(self) -> None:
         # Initialize model
-        self.model = GORA()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = GORA().to(self.device)
         # Set the parameters
         self.optimizer = self.__get_optimizer()
-        self.loss_fn = self.__get_loss_fn()
+        self.loss_fn = self.__get_loss_fn().to(self.device)
         self.n_epochs = 100
         self.batch_size = 32
 
     def load_pretrained_model(self) -> None:
         raise NotImplementedError
 
-    def train(self, train_input, train_target) -> None:
+    def train(self, train_input: torch.Tensor, train_target: torch.Tensor) -> None:
         # Set model in training mode
         self.model.train()
         # Training loop
@@ -28,8 +29,8 @@ class Model:
             # Minibatch loop
             for batch_idx in range(0, len(train_input), self.batch_size):
                 # Get minibatch
-                batch_input = train_input[batch_idx:batch_idx + self.batch_size]
-                batch_target = train_target[batch_idx:batch_idx + self.batch_size]
+                batch_input = train_input[batch_idx:batch_idx + self.batch_size].to(self.device)
+                batch_target = train_target[batch_idx:batch_idx + self.batch_size].to(self.device)
                 # Zero the gradients
                 self.optimizer.zero_grad()
                 # Forward pass
@@ -41,13 +42,13 @@ class Model:
                 # Update parameters
                 self.optimizer.step()
                 # Print loss
-                if batch_idx % 10 == 0:
+                if batch_idx % 10 == 9:
                     print(
                         f'\tBatch {batch_idx + 1} / {len(train_input)}: {loss.item():.4f}')
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
 
-    def predict(self, test_input) -> torch.Tensor:
+    def predict(self, test_input: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
 
     def __get_optimizer(self, lr: float = 1e-3) -> torch.optim.Optimizer:
