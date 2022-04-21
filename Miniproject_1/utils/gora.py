@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class GORA(nn.Module):
     """
-    G.O.R.A.: Gaussian nOise Restoring Autoencoder
+    G.O.R.A.: Gaussian nOise Reducing Autoencoder
         A Space Model
     - Yes, by.
     """
