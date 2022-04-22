@@ -15,7 +15,6 @@ class Model:
         # Set the parameters
         self.optimizer = self.__get_optimizer()
         self.loss_fn = self.__get_loss_fn().to(self.device)
-        self.n_epochs = 100
         self.batch_size = 32
         self.validate_every = 10
         # Get dataloaders
@@ -25,14 +24,14 @@ class Model:
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
-    def train(self, train_input: torch.Tensor, train_target: torch.Tensor) -> None:
+    def train(self, train_input: torch.Tensor, train_target: torch.Tensor, num_epochs: int) -> None:
         print('Training...')
         # Set model in training mode
         self.model.train()
         # Training loop
         start_time = time.time()
-        for epoch in range(self.n_epochs):
-            print(f'Epoch {epoch + 1} / {self.n_epochs}')
+        for epoch in range(num_epochs):
+            print(f'Epoch {epoch + 1} / {num_epochs}')
             # Minibatch loop
             for batch_idx in range(0, len(train_input), self.batch_size):
                 # Get minibatch
