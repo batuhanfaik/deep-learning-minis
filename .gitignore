@@ -153,3 +153,17 @@ dmypy.json
 cython_debug/
 
 /miniproject_dataset/
+
+
+### Macbook template
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.com.apple.timemachine.donotpresent
+
+### Windows template
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
