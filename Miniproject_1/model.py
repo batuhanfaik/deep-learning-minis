@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 from utils import GORA
+from utils import NoiseDataset
 
 import torch
 import time
@@ -17,10 +18,8 @@ class Model:
         self.n_epochs = 100
         self.batch_size = 32
         self.validate_every = 10
-        # Set data
-        self.data_path = '../miniproject_dataset/'
-        self.train_input, self.train_target = self.__get_data('train')
-        self.val_input, self.val_target = self.__get_data('val')
+        # Get dataloaders
+        self.train_loader, self.val_loader = self.__get_dataloaders()
 
     def load_pretrained_model(self, ckpt_name: str = 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
@@ -110,21 +109,21 @@ class Model:
             eps=1e-08,
         )
 
-    @staticmethod
-    def __get_loss_fn(loss_fn: Optional[None, str] = None) -> torch.nn.modules.loss:
+    def __get_loss_fn(self, loss_fn: Optional[None, str] = None)\
+            -> torch.nn.modules.loss:
         if loss_fn is None or loss_fn == 'l2':
-            return torch.nn.MSELoss()
+            return torch.nn.MSELoss().to(self.device)
         elif loss_fn == 'l1':
-            return torch.nn.L1Loss()
+            return torch.nn.L1Loss().to(self.device)
         else:
             raise ValueError(f'Unknown loss function {loss_fn}')
 
-    def __get_data(self, data_type: str) -> Tuple[torch.Tensor, torch.Tensor]:
-        if data_type == 'train':
-            return torch.load(os.path.join(self.data_path, 'train_data.pkl'),
-                              map_location=self.device)
-        elif data_type == 'val':
-            return torch.load(os.path.join(self.data_path, 'val_data.pkl'),
-                              map_location=self.device)
-        else:
-            raise ValueError(f'Unknown data type {data_type}')
+    def __get_dataloaders(self) -> Tuple[torch.utils.data.DataLoader,
+                                         torch.utils.data.DataLoader]:
+        train_loader = torch.utils.data.DataLoader(NoiseDataset('train'),
+                                                   batch_size=self.batch_size,
+                                                   shuffle=True)
+        val_loader = torch.utils.data.DataLoader(NoiseDataset('val'),
+                                                 batch_size=self.batch_size,
+                                                 shuffle=True)
+        return train_loader, val_loader
