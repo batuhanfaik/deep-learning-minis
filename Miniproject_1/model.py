@@ -17,6 +17,7 @@ class Model:
         # Validation data for performance tracking
         self.val_input, self.val_target = None, None
         self.validate_every = 0
+        self.best_model = {'model': None, 'loss': float('inf')}
 
     def load_pretrained_model(self, ckpt_name: str = 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
@@ -64,6 +65,9 @@ class Model:
                 if epoch % self.validate_every == self.validate_every - 1:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.4f}')
+                    # Save model if validation loss is lower than the best model
+                    if loss < self.best_model['loss']:
+                        self.best_model['model'] = self.model.state_dict()
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
@@ -146,4 +150,4 @@ class Model:
         self.validate_every = validation_frequency
 
     def save_best_model(self, path: str):
-        torch.save(self.model.state_dict(), path)
+        torch.save(self.best_model['model'], path)
