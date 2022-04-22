@@ -1,10 +1,8 @@
-from typing import Optional, Tuple
+from typing import Union
 from utils import GORA
-from utils import NoiseDataset
 
 import torch
 import time
-import os
 
 
 class Model:
@@ -16,19 +14,25 @@ class Model:
         self.optimizer = self.__get_optimizer()
         self.loss_fn = self.__get_loss_fn().to(self.device)
         self.batch_size = 32
-        self.validate_every = 10
-        # Get dataloaders
-        self.train_loader, self.val_loader = self.__get_dataloaders()
+        # Validation data for performance tracking
+        self.val_input, self.val_target = None, None
+        self.validate_every = 0
 
     def load_pretrained_model(self, ckpt_name: str = 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
-    def train(self, train_input: torch.Tensor, train_target: torch.Tensor, num_epochs: int) -> None:
+    def train(self, train_input: torch.Tensor, train_target: torch.Tensor,
+              num_epochs: int) -> None:
         print('Training...')
         # Set model in training mode
         self.model.train()
+        # If input is ByteTensor, convert to FloatTensor
+        train_input = self.__check_input_type(train_input)
+        train_target = self.__check_input_type(train_target)
         # Training loop
+        loss_history = []
+        running_loss = 0.0
         start_time = time.time()
         for epoch in range(num_epochs):
             print(f'Epoch {epoch + 1} / {num_epochs}')
@@ -45,18 +49,21 @@ class Model:
                 output = self.model(batch_input)
                 # Compute loss
                 loss = self.loss_fn(output, batch_target)
+                running_loss += loss.item()
                 # Backward pass
                 loss.backward()
                 # Update parameters
                 self.optimizer.step()
-                # Print loss
-                if batch_idx % 10 == 9:
-                    print(
-                        f'\tBatch {batch_idx + 1} / {len(train_input)}: {loss.item():.4f}')
-            # Validate
-            if epoch % self.validate_every == self.validate_every - 1:
-                loss = self.validate(self.val_input, self.val_target)
-                print(f'\tValidation loss: {loss:.4f}')
+            # Append loss to history
+            loss_history.append(running_loss / len(train_input))
+            running_loss = 0.0
+            # Print loss
+            print(f'\tLoss: {loss_history[-1]:.4f}')
+            # Validate if validation frequency is set, which requires a validation set
+            if self.validate_every:
+                if epoch % self.validate_every == self.validate_every - 1:
+                    loss = self.validate(self.val_input, self.val_target)
+                    print(f'\tValidation loss: {loss:.4f}')
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
@@ -65,6 +72,9 @@ class Model:
         print('Validating...')
         # Set model in evaluation mode
         self.model.eval()
+        # If input is ByteTensor, convert to FloatTensor
+        test_input = self.__check_input_type(test_input)
+        test_target = self.__check_input_type(test_target)
         # Predict on minibatches
         denoised_output = torch.empty(test_input.shape).to(self.device)
         with torch.no_grad():
@@ -85,6 +95,8 @@ class Model:
     def predict(self, test_input: torch.Tensor) -> torch.Tensor:
         # Set model in evaluation mode
         self.model.eval()
+        # If input is ByteTensor, convert to FloatTensor
+        test_input = self.__check_input_type(test_input)
         # Predict on minibatches
         denoised_output = torch.empty(test_input.shape).to(self.device)
         with torch.no_grad():
@@ -108,7 +120,7 @@ class Model:
             eps=1e-08,
         )
 
-    def __get_loss_fn(self, loss_fn: Optional[None, str] = None)\
+    def __get_loss_fn(self, loss_fn: Union[None, str] = None) \
             -> torch.nn.modules.loss:
         if loss_fn is None or loss_fn == 'l2':
             return torch.nn.MSELoss().to(self.device)
@@ -117,12 +129,21 @@ class Model:
         else:
             raise ValueError(f'Unknown loss function {loss_fn}')
 
-    def __get_dataloaders(self) -> Tuple[torch.utils.data.DataLoader,
-                                         torch.utils.data.DataLoader]:
-        train_loader = torch.utils.data.DataLoader(NoiseDataset('train'),
-                                                   batch_size=self.batch_size,
-                                                   shuffle=True)
-        val_loader = torch.utils.data.DataLoader(NoiseDataset('val'),
-                                                 batch_size=self.batch_size,
-                                                 shuffle=True)
-        return train_loader, val_loader
+    @staticmethod
+    def __check_input_type(tensor_input: torch.Tensor) -> torch.Tensor:
+        # Convert to float if not already
+        if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
+            return tensor_input.float()
+        return tensor_input
+
+    def set_batch_size(self, batch_size: int):
+        self.batch_size = batch_size
+
+    def set_val_data(self, val_input: torch.Tensor, val_target: torch.Tensor,
+                     validation_frequency: int = 10):
+        self.val_input = val_input
+        self.val_target = val_target
+        self.validate_every = validation_frequency
+
+    def save_best_model(self, path: str):
+        torch.save(self.model.state_dict(), path)

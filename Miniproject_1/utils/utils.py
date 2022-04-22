@@ -14,4 +14,4 @@ def psnr(denoised_image: torch.Tensor, original_image: torch.Tensor) -> torch.Te
     """
     mse = torch.mean((denoised_image - original_image) ** 2)
     eps = 1e-8
-    return -10 * torch.log10(mse + eps)
+    return 10 * torch.log10(mse + eps)
