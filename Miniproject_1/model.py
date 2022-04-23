@@ -56,7 +56,7 @@ class Model:
                 # Update parameters
                 self.optimizer.step()
             # Append loss to history
-            loss_history.append(running_loss / len(train_input))
+            loss_history.append(running_loss / (len(train_input) / self.batch_size))
             running_loss = 0.0
             # Print loss
             print(f'\tLoss: {loss_history[-1]:.4f}')
@@ -79,8 +79,8 @@ class Model:
         # If input is ByteTensor, convert to FloatTensor
         test_input = self.__check_input_type(test_input)
         test_target = self.__check_input_type(test_target)
-        # Predict on minibatches
-        denoised_output = torch.empty(test_input.shape).to(self.device)
+        # Validation loop
+        running_loss = 0.0
         with torch.no_grad():
             for batch_idx in range(0, len(test_input), self.batch_size):
                 # Get minibatch
@@ -90,11 +90,11 @@ class Model:
                     self.device)
                 # Forward pass
                 output = self.model(batch_input)
-                # Save output
-                denoised_output[batch_idx:batch_idx + self.batch_size] = output
-        # Compute loss
-        loss = self.loss_fn(denoised_output, test_target)
-        return loss.item()
+                # Compute loss
+                loss = self.loss_fn(output, batch_target)
+                running_loss += loss.item()
+            # Return loss
+            return running_loss / (len(test_input) / self.batch_size)
 
     def predict(self, test_input: torch.Tensor) -> torch.Tensor:
         # Set model in evaluation mode
@@ -114,7 +114,7 @@ class Model:
                 denoised_output[batch_idx:batch_idx + self.batch_size] = output
         return denoised_output
 
-    def __get_optimizer(self, lr: float = 1e-3) -> torch.optim.Optimizer:
+    def __get_optimizer(self, lr: float = 1e-3) -> torch.optim:
         # Parameters are from paper 'Noise2Noise: Learning Image Restoration without
         # Clean Data' https://arxiv.org/abs/1803.04189
         return torch.optim.Adam(
@@ -135,7 +135,7 @@ class Model:
 
     @staticmethod
     def __check_input_type(tensor_input: torch.Tensor) -> torch.Tensor:
-        # Convert to float if not already
+        # Convert Byte tensors to float if not already
         if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
             return tensor_input.float()
         return tensor_input

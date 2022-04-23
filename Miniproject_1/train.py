@@ -43,10 +43,10 @@ def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
 
 
 if __name__ == '__main__':
-    num_epochs = 2
-    batch_size = 64
+    num_epochs = 100
+    batch_size = 2048
     # Validation step is optional
-    validation_frequency = 10
+    validation_frequency = 1
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_input, train_target = get_data(mode='train', device=device)
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     prediction = model.predict(val_input)
     # Check the PSNR
     psnr_val = psnr(prediction, val_target)
-    print(f'PSNR: {psnr_val:4f} dB')
+    print(f'PSNR: {psnr_val:.4f} dB')
     # Save the best model
     model.save_best_model(OUTPUT_MODEL_PATH)
     print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
