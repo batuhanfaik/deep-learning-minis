@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, Any
 
 from parameter import Parameter
 
@@ -18,3 +18,6 @@ class Module(object):
 
     def param(self):
         return [(parameter.data, parameter.grad) for _, parameter in self.parameters.items() if parameter is not None]
+    
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.forward(*args)

@@ -1,7 +1,7 @@
 import torch
 import unittest
 
-from modules import Linear, ReLU, Sigmoid
+from modules import Linear, ReLU, Sigmoid, Sequential
 
 
 class TestModules(unittest.TestCase):
@@ -33,3 +33,8 @@ class TestModules(unittest.TestCase):
         grads = torch.ones((2,))
         out = sigmoid.backward(grads)
         self.assertTrue(torch.equal(out, torch.tensor([0.25, (1/torch.e) / (1 + 1/torch.e) ** 2])))
+    
+    def test_sequential(self):
+        x = torch.tensor([[1.0, 1.0], [1.0, 1.0]])
+        model = Sequential(Linear(2, 4), ReLU(), Linear(4, 1))
+        print(model(x))

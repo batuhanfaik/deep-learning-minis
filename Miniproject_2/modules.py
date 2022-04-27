@@ -6,6 +6,29 @@ from parameter import Parameter
 from functional import linear, relu, sigmoid
 
 
+
+class Sequential(Module):
+    def __init__(self, *modules) -> None:
+        super().__init__('Sequential')
+        self.modules = modules
+    
+    def forward(self, *input):
+        output = input
+
+        for module in self.modules:
+            output = module.forward(*output)
+        
+        return output
+
+    def backward(self, *gradwrtoutput):
+        output = gradwrtoutput
+
+        for module in self.modules[::-1]:
+            output = module.backward(*output)
+        
+        return output
+
+
 class Linear(Module):
     def __init__(self, in_dim: int, out_dim: int, bias: bool = True) -> None:
         super().__init__('Linear')
