@@ -3,7 +3,7 @@ import torch
 
 from module import Module
 from parameter import Parameter
-from functional import linear
+from functional import linear, relu, sigmoid
 
 
 class Linear(Module):
@@ -32,4 +32,35 @@ class Linear(Module):
         if self.bias is not None:
             self.bias.accumulate_grad(*bias_grads)
         
+        return input_grads[0] if len(input_grads) == 1 else input_grads
+
+
+class ReLU(Module):
+    def __init__(self) -> None:
+        super().__init__("ReLU")
+        self.input = None
+    
+    def forward(self, *input):
+        self.input = input
+        outputs = [relu(x) for x in input]
+        return outputs[0] if len(outputs) == 1 else outputs
+    
+    def backward(self, *gradwrtoutput):
+        input_grads = [grad * torch.where(self.input[index] > 0, 1, 0) for index, grad in enumerate(gradwrtoutput)]
+        return input_grads[0] if len(input_grads) == 1 else input_grads
+
+
+class Sigmoid(Module):
+    def __init__(self) -> None:
+        super().__init__("Sigmoid")
+        self.input = None
+    
+    def forward(self, *input):
+        self.input = input
+        outputs = [sigmoid(x) for x in input]
+        return outputs[0] if len(outputs) == 1 else outputs
+    
+    def backward(self, *gradwrtoutput):
+        input_sigmoids = [sigmoid(x) for x in self.input]
+        input_grads = [grad * input_sigmoids[index] * (1-input_sigmoids[index]) for index, grad in enumerate(gradwrtoutput)]
         return input_grads[0] if len(input_grads) == 1 else input_grads

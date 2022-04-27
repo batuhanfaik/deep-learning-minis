@@ -12,7 +12,8 @@ class Parameter:
         self.grad = torch.tensor(0)
     
     def accumulate_grad(self, *grads: torch.Tensor) -> torch.Tensor:
-        self.grad = self.grad + reduce(lambda a, b: a+b, grads)
+        if self.requires_grad:
+            self.grad = self.grad + reduce(lambda a, b: a+b, grads)
         return self.grad
     
     def zero_grad(self) -> None:
