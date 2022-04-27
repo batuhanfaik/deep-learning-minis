@@ -16,7 +16,10 @@ class Sequential(Module):
         output = input
 
         for module in self.modules:
-            output = module.forward(*output)
+            if isinstance(output, torch.Tensor):
+                output = module.forward(output)
+            else:
+                output = module.forward(*output)
         
         return output
 
@@ -24,7 +27,10 @@ class Sequential(Module):
         output = gradwrtoutput
 
         for module in self.modules[::-1]:
-            output = module.backward(*output)
+            if isinstance(output, torch.Tensor):
+                output = module.backward(output)
+            else:
+                output = module.backward(*output)
         
         return output
 

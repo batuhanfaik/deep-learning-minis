@@ -37,4 +37,9 @@ class TestModules(unittest.TestCase):
     def test_sequential(self):
         x = torch.tensor([[1.0, 1.0], [1.0, 1.0]])
         model = Sequential(Linear(2, 4), ReLU(), Linear(4, 1))
-        print(model(x))
+        out = model(x)
+        self.assertEqual(out.shape, (2, 1))
+        
+        grads = torch.ones((2, 1))
+        out = model.backward(grads)
+        self.assertEqual(out.shape, (2, 2))
