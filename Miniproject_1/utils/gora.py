@@ -19,7 +19,7 @@ class GORA(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2))
 
-        # Layers: enc_conv(i), pool(i); i=2..5
+        # Layers: enc_conv(i), pool(i); i=2..3
         self._block2 = nn.Sequential(
             nn.Conv2d(24, 24, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
@@ -64,17 +64,11 @@ class GORA(nn.Module):
         pool1 = self._block1(x)
         pool2 = self._block2(pool1)
         pool3 = self._block2(pool2)
-        pool4 = self._block2(pool3)
-        pool5 = self._block2(pool4)
 
         # Decoder
-        upsample5 = self._block3(pool5)
-        concat5 = torch.cat((upsample5, pool4), dim=1)
-        upsample4 = self._block4(concat5)
-        concat4 = torch.cat((upsample4, pool3), dim=1)
-        upsample3 = self._block5(concat4)
+        upsample3 = self._block3(pool3)
         concat3 = torch.cat((upsample3, pool2), dim=1)
-        upsample2 = self._block5(concat3)
+        upsample2 = self._block4(concat3)
         concat2 = torch.cat((upsample2, pool1), dim=1)
         upsample1 = self._block5(concat2)
         concat1 = torch.cat((upsample1, x), dim=1)

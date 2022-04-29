@@ -7,7 +7,7 @@ from utils import NoiseDataset
 from utils import psnr
 from model import Model
 
-DATA_PATH = '../miniproject_dataset/'
+DATA_PATH = 'miniproject_dataset/'
 OUTPUT_MODEL_PATH = 'bestmodel.pth'
 SHUFFLE_DATA = True
 
@@ -43,8 +43,8 @@ def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
 
 
 if __name__ == '__main__':
-    num_epochs = 100
-    batch_size = 2048
+    num_epochs = 1000
+    batch_size = 10240
     # Validation step is optional
     validation_frequency = 1
 

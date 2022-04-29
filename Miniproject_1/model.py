@@ -1,4 +1,6 @@
-from typing import Union
+from typing import Union, OrderedDict
+from pathlib import Path
+
 from .utils import GORA
 
 import torch
@@ -12,14 +14,15 @@ class Model:
         self.model = GORA().to(self.device)
         # Set the parameters
         self.optimizer = self.__get_optimizer()
+        self.scheduler = self.__get_scheduler()
         self.loss_fn = self.__get_loss_fn().to(self.device)
         self.batch_size = 32
         # Validation data for performance tracking
         self.val_input, self.val_target = None, None
         self.validate_every = 0
-        self.best_model = {'model': None, 'loss': float('inf')}
+        self.best_model = {'model': OrderedDict[str, torch.Tensor], 'loss': float('inf')}
 
-    def load_pretrained_model(self, ckpt_name: str = 'Miniproject_1/bestmodel.pth') -> None:
+    def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
@@ -65,6 +68,7 @@ class Model:
                 if epoch % self.validate_every == self.validate_every - 1:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.4f}')
+                    self.scheduler.step(loss)
                     # Save model if validation loss is lower than the best model
                     if loss < self.best_model['loss']:
                         self.best_model['model'] = self.model.state_dict()
@@ -123,6 +127,12 @@ class Model:
             betas=(0.9, 0.99),
             eps=1e-08,
         )
+
+    def __get_scheduler(self, mode: str = 'min',
+                        factor: float = 0.1) -> torch.optim.lr_scheduler:
+        return torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode,
+                                                          factor=factor, patience=5,
+                                                          verbose=False)
 
     def __get_loss_fn(self, loss_fn: Union[None, str] = None) \
             -> torch.nn.modules.loss:
