@@ -1,5 +1,5 @@
 from typing import Union
-from utils import GORA
+from .utils import GORA
 
 import torch
 import time
@@ -19,12 +19,12 @@ class Model:
         self.validate_every = 0
         self.best_model = {'model': None, 'loss': float('inf')}
 
-    def load_pretrained_model(self, ckpt_name: str = 'bestmodel.pth') -> None:
+    def load_pretrained_model(self, ckpt_name: str = 'Miniproject_1/bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor,
-              num_epochs: int) -> None:
+              num_epochs: int = 25) -> None:
         print('Training...')
         # Set model in training mode
         self.model.train()
@@ -140,14 +140,14 @@ class Model:
             return tensor_input.float()
         return tensor_input
 
-    def set_batch_size(self, batch_size: int):
+    def set_batch_size(self, batch_size: int) -> None:
         self.batch_size = batch_size
 
     def set_val_data(self, val_input: torch.Tensor, val_target: torch.Tensor,
-                     validation_frequency: int = 10):
+                     validation_frequency: int = 10) -> None:
         self.val_input = val_input
         self.val_target = val_target
         self.validate_every = validation_frequency
 
-    def save_best_model(self, path: str):
+    def save_best_model(self, path: str) -> None:
         torch.save(self.best_model['model'], path)

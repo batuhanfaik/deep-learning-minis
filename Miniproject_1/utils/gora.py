@@ -13,51 +13,48 @@ class GORA(nn.Module):
         super(GORA, self).__init__()
         # Layers: enc_conv0, enc_conv1, pool1
         self._block1 = nn.Sequential(
-            nn.Conv2d(3, 48, 3, stride=1, padding=1),
+            nn.Conv2d(3, 24, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(48, 48, 3, padding=1),
+            nn.Conv2d(24, 24, 3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2))
 
         # Layers: enc_conv(i), pool(i); i=2..5
         self._block2 = nn.Sequential(
-            nn.Conv2d(48, 48, 3, stride=1, padding=1),
+            nn.Conv2d(24, 24, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2))
 
         # Layers: enc_conv6, upsample5
         self._block3 = nn.Sequential(
-            nn.Conv2d(48, 48, 3, stride=1, padding=1),
+            nn.Conv2d(24, 24, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
-        # nn.Upsample(scale_factor=2, mode='nearest'))
+            nn.ConvTranspose2d(24, 24, 3, stride=2, padding=1, output_padding=1))
 
         # Layers: dec_conv5a, dec_conv5b, upsample4
         self._block4 = nn.Sequential(
-            nn.Conv2d(96, 96, 3, stride=1, padding=1),
+            nn.Conv2d(48, 48, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(96, 96, 3, stride=1, padding=1),
+            nn.Conv2d(48, 48, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(96, 96, 3, stride=2, padding=1, output_padding=1))
-        # nn.Upsample(scale_factor=2, mode='nearest'))
+            nn.ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
 
         # Layers: dec_deconv(i)a, dec_deconv(i)b, upsample(i-1); i=4..2
         self._block5 = nn.Sequential(
-            nn.Conv2d(144, 96, 3, stride=1, padding=1),
+            nn.Conv2d(72, 48, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(96, 96, 3, stride=1, padding=1),
+            nn.Conv2d(48, 48, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(96, 96, 3, stride=2, padding=1, output_padding=1))
-        # nn.Upsample(scale_factor=2, mode='nearest'))
+            nn.ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
 
         # Layers: dec_conv1a, dec_conv1b, dec_conv1c,
         self._block6 = nn.Sequential(
-            nn.Conv2d(96 + 3, 64, 3, stride=1, padding=1),
+            nn.Conv2d(48 + 3, 32, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 32, 3, stride=1, padding=1),
+            nn.Conv2d(32, 16, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 3, 3, stride=1, padding=1),
-            nn.LeakyReLU(0.1))
+            nn.Conv2d(16, 3, 3, stride=1, padding=1),
+            nn.ReLU(inplace=True))
         # Initialize weights
         self._init_weights()
 
