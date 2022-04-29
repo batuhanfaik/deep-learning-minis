@@ -25,13 +25,13 @@ class GORA(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2))
 
-        # Layers: enc_conv6, upsample5
+        # Layers: enc_conv4, upsample3
         self._block3 = nn.Sequential(
             nn.Conv2d(24, 24, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(24, 24, 3, stride=2, padding=1, output_padding=1))
 
-        # Layers: dec_conv5a, dec_conv5b, upsample4
+        # Layers: dec_conv3a, dec_conv3b, upsample2
         self._block4 = nn.Sequential(
             nn.Conv2d(48, 48, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),
@@ -39,7 +39,7 @@ class GORA(nn.Module):
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
 
-        # Layers: dec_deconv(i)a, dec_deconv(i)b, upsample(i-1); i=4..2
+        # Layers: dec_deconv(i)a, dec_deconv(i)b, upsample(i-1); i=2
         self._block5 = nn.Sequential(
             nn.Conv2d(72, 48, 3, stride=1, padding=1),
             nn.ReLU(inplace=True),

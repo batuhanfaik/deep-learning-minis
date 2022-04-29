@@ -1,7 +1,7 @@
 from typing import Union, OrderedDict
 from pathlib import Path
 
-from .utils import GORA
+from utils import GORA
 
 import torch
 import time
@@ -10,13 +10,13 @@ import time
 class Model:
     def __init__(self) -> None:
         # Initialize model
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.model = GORA().to(self.device)
         # Set the parameters
         self.optimizer = self.__get_optimizer()
-        self.scheduler = self.__get_scheduler()
+        self.scheduler = self.__get_scheduler(factor=0.5)
         self.loss_fn = self.__get_loss_fn().to(self.device)
-        self.batch_size = 32
+        self.batch_size = 100
         # Validation data for performance tracking
         self.val_input, self.val_target = None, None
         self.validate_every = 0
@@ -62,12 +62,12 @@ class Model:
             loss_history.append(running_loss / (len(train_input) / self.batch_size))
             running_loss = 0.0
             # Print loss
-            print(f'\tLoss: {loss_history[-1]:.4f}')
+            print(f'\tLoss: {loss_history[-1]:.6f}')
             # Validate if validation frequency is set, which requires a validation set
             if self.validate_every:
                 if epoch % self.validate_every == self.validate_every - 1:
                     loss = self.validate(self.val_input, self.val_target)
-                    print(f'\tValidation loss: {loss:.4f}')
+                    print(f'\tValidation loss: {loss:.6f}')
                     self.scheduler.step(loss)
                     # Save model if validation loss is lower than the best model
                     if loss < self.best_model['loss']:
@@ -131,7 +131,7 @@ class Model:
     def __get_scheduler(self, mode: str = 'min',
                         factor: float = 0.1) -> torch.optim.lr_scheduler:
         return torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode,
-                                                          factor=factor, patience=5,
+                                                          factor=factor, patience=10,
                                                           verbose=False)
 
     def __get_loss_fn(self, loss_fn: Union[None, str] = None) \
@@ -147,7 +147,7 @@ class Model:
     def __check_input_type(tensor_input: torch.Tensor) -> torch.Tensor:
         # Convert Byte tensors to float if not already
         if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
-            return tensor_input.float()
+            return tensor_input.float() / 255.0
         return tensor_input
 
     def set_batch_size(self, batch_size: int) -> None:

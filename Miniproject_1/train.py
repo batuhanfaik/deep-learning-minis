@@ -1,14 +1,16 @@
 from typing import Tuple
+from pathlib import Path
 
 import torch
 import os
+
 
 from utils import NoiseDataset
 from utils import psnr
 from model import Model
 
 DATA_PATH = 'miniproject_dataset/'
-OUTPUT_MODEL_PATH = 'bestmodel.pth'
+OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
 SHUFFLE_DATA = True
 
 
@@ -19,13 +21,14 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
     Loads the data from the given path.
     """
     if mode == 'train':
-        return torch.load(os.path.join(data_path, 'train_data.pkl'),
-                          map_location=device)
+        source, target = torch.load(os.path.join(data_path, 'train_data.pkl'),
+                                    map_location=device)
     elif mode == 'val':
-        return torch.load(os.path.join(data_path, 'val_data.pkl'),
-                          map_location=device)
+        source, target = torch.load(os.path.join(data_path, 'val_data.pkl'),
+                                    map_location=device)
     else:
         raise ValueError(f'Unknown data type {mode}')
+    return source.float() / 255.0, target.float() / 255.0
 
 
 def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
@@ -66,11 +69,13 @@ if __name__ == '__main__':
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
     # Train the model
     model.train(train_input, train_target, num_epochs)
+    # Load the pretrained model
+    # model.load_pretrained_model()
     # Evaluate the model
     prediction = model.predict(val_input)
     # Check the PSNR
     psnr_val = psnr(prediction, val_target)
-    print(f'PSNR: {psnr_val:.4f} dB')
+    print(f'PSNR: {psnr_val:.6f} dB')
     # Save the best model
     model.save_best_model(OUTPUT_MODEL_PATH)
     print(f'Saved model to `{OUTPUT_MODEL_PATH}`')

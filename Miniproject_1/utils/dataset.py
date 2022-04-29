@@ -21,10 +21,11 @@ class NoiseDataset(torch.utils.data.Dataset):
 
     def __read_data(self, data_type: str = 'train'):
         if data_type == 'train':
-            return torch.load(os.path.join(self.data_path, 'train_data.pkl'),
-                              map_location=self.device)
+            source, target = torch.load(os.path.join(self.data_path, 'train_data.pkl'),
+                                        map_location=self.device)
         elif data_type == 'val':
-            return torch.load(os.path.join(self.data_path, 'val_data.pkl'),
-                              map_location=self.device)
+            source, target = torch.load(os.path.join(self.data_path, 'val_data.pkl'),
+                                        map_location=self.device)
         else:
             raise ValueError('data_type must be train or val')
+        return source.float() / 255.0, target.float() / 255.0
