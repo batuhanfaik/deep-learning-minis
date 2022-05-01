@@ -5,12 +5,7 @@ from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
 from functional import linear, relu, sigmoid
-
-
-def check_inputs(inputs, length=1):
-    if len(inputs) != length:
-        raise TypeError(f"Expected {length} inputs, got {len(inputs)}")
-
+from utils import check_inputs, get_gradient
 
 class Sequential(Module):
     def __init__(self, *modules) -> None:
@@ -27,8 +22,7 @@ class Sequential(Module):
         return make_gtensor(output, self, input[0])
 
     def backward(self, *gradwrtoutput):
-        check_inputs(gradwrtoutput)
-        output = gradwrtoutput[0]
+        output = get_gradient(gradwrtoutput)
 
         for module in self.modules[::-1]:
             output = module.backward(output)
@@ -55,8 +49,7 @@ class Linear(Module):
         return output
     
     def backward(self, *gradwrtoutput):
-        check_inputs(gradwrtoutput)
-        grad = gradwrtoutput[0]
+        grad = get_gradient(gradwrtoutput)
         weight_grad = torch.mm(grad.T, self.input)
         bias_grad = grad
         input_grad = torch.mm(grad, self.weight.data)
@@ -80,8 +73,7 @@ class ReLU(Module):
         return output
     
     def backward(self, *gradwrtoutput):
-        check_inputs(gradwrtoutput)
-        grad = gradwrtoutput[0]
+        grad = get_gradient(gradwrtoutput)
         input_grad = grad * torch.where(self.input > 0, 1, 0)
         return input_grad
 
@@ -98,8 +90,7 @@ class Sigmoid(Module):
         return output
     
     def backward(self, *gradwrtoutput):
-        check_inputs(gradwrtoutput)
-        grad = gradwrtoutput[0]
+        grad = get_gradient(gradwrtoutput)
         input_sigmoid = sigmoid(self.input)
         input_grad = grad * input_sigmoid * (1-input_sigmoid)
         return input_grad
@@ -120,20 +111,17 @@ class MSELoss(Module):
         loss = error
 
         if self.reduction == "sum":
-            loss = torch.sum(error)
+            loss = torch.sum(error, dim=0)
         elif self.reduction == "mean":
-            loss = torch.mean(error)
+            loss = torch.mean(error, dim=0)
         
         return make_gtensor(loss, self, [self.input, self.target])
     
     def backward(self, *gradwrtoutput):
-        check_inputs(gradwrtoutput)
-        grad = gradwrtoutput[0]
+        grad = get_gradient(gradwrtoutput)
         input_grad = 2 * (self.input - self.target)
 
-        if self.reduction == "sum":
-            input_grad = torch.sum(input_grad)
-        elif self.reduction == "mean":
-            input_grad = torch.mean(input_grad)
+        if self.reduction == "mean":
+            input_grad = input_grad / len(self.input)
         
         return grad * input_grad

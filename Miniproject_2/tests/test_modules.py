@@ -69,3 +69,11 @@ class TestModules(unittest.TestCase):
         loss = MSELoss(reduction=None)
         out = loss(x, y)
         self.assertTrue(torch.equal(out, torch.tensor([0.0, 100.0, 1.0, 4.0])))
+
+        x = torch.tensor([[1.0, 1.0], [1.0, 1.0]])
+        y = torch.tensor([[0], [1]])
+        model = Sequential(Linear(2, 4), ReLU(), Linear(4, 1))
+        out = model(x)
+        criterion = MSELoss()
+        loss = criterion(out, y)
+        loss.backward()

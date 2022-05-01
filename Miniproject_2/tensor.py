@@ -1,4 +1,5 @@
 import torch
+from utils import get_gradient
 
 ATTR_INPUTS = "inputs"
 ATTR_OPERATION = "operation"
@@ -21,6 +22,20 @@ class GTensor(torch.Tensor):
         if self.metadata:
             return self.metadata.get(ATTR_OPERATION)
         return None
+    
+    def backward(self, *gradients, **kwargs):
+        gradient = get_gradient(gradients)
+        operation = self.get_operation()
+
+        if operation is not None:
+            gradient = operation.backward(gradient)
+ 
+        inputs = self.get_inputs()
+
+        for input in inputs:
+            if isinstance(input, GTensor):
+                input.backward(gradient)
+        
 
 def make_gtensor(output, operation=None, inputs=None):
     if inputs is None:

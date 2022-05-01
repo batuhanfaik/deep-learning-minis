@@ -15,12 +15,9 @@ class Module(object):
 
     def backward(self, *gradwrtoutput):
         raise NotImplementedError
-
-    # def param(self):
-    #     return [(parameter.data, parameter.grad) for _, parameter in self.parameters.items() if parameter is not None]
     
     def parameters(self):
-        return [parameter for _, parameter in self.parameters.items() if parameter is not None]
+        return [parameter for _, parameter in self._parameters.items() if parameter is not None]
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.forward(*args)
