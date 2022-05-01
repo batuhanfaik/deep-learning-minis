@@ -5,10 +5,10 @@ from parameter import Parameter
 class Module(object):
     def __init__(self, name: Optional[str] = None) -> None:
         self.name = name
-        self.parameters = {}
+        self._parameters = {}
 
     def register_parameter(self, name: str, parameter: Optional[Parameter] = None) -> None:
-        self.parameters[name] = parameter
+        self._parameters[name] = parameter
 
     def forward(self, *input):
         raise NotImplementedError
@@ -16,8 +16,11 @@ class Module(object):
     def backward(self, *gradwrtoutput):
         raise NotImplementedError
 
-    def param(self):
-        return [(parameter.data, parameter.grad) for _, parameter in self.parameters.items() if parameter is not None]
+    # def param(self):
+    #     return [(parameter.data, parameter.grad) for _, parameter in self.parameters.items() if parameter is not None]
     
+    def parameters(self):
+        return [parameter for _, parameter in self.parameters.items() if parameter is not None]
+
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.forward(*args)

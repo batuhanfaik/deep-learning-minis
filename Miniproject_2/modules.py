@@ -1,10 +1,15 @@
 
 import torch
 
+from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
 from functional import linear, relu, sigmoid
 
+
+def check_inputs(inputs, length=1):
+    if len(inputs) != length:
+        raise TypeError(f"Expected {length} inputs, got {len(inputs)}")
 
 
 class Sequential(Module):
@@ -13,24 +18,20 @@ class Sequential(Module):
         self.modules = modules
     
     def forward(self, *input):
-        output = input
+        check_inputs(input)
+        output = input[0]
 
         for module in self.modules:
-            if isinstance(output, torch.Tensor):
-                output = module.forward(output)
-            else:
-                output = module.forward(*output)
-        
-        return output
+            output = module.forward(output)
+
+        return make_gtensor(output, self, input[0])
 
     def backward(self, *gradwrtoutput):
-        output = gradwrtoutput
+        check_inputs(gradwrtoutput)
+        output = gradwrtoutput[0]
 
         for module in self.modules[::-1]:
-            if isinstance(output, torch.Tensor):
-                output = module.backward(output)
-            else:
-                output = module.backward(*output)
+            output = module.backward(output)
         
         return output
 
@@ -48,20 +49,23 @@ class Linear(Module):
         self.register_parameter('bias', self.bias)
     
     def forward(self, *input):
-        self.input = input
-        outputs = [linear(x, self.weight.data, self.bias.data) for x in input]
-        return outputs[0] if len(outputs) == 1 else outputs
+        check_inputs(input)
+        self.input = input[0]
+        output = make_gtensor(linear(self.input, self.weight.data, self.bias.data), self, self.input)
+        return output
     
     def backward(self, *gradwrtoutput):
-        weight_grads = [torch.mm(grad.T, self.input[index]) for index, grad in enumerate(gradwrtoutput)]
-        bias_grads = [grad for grad in gradwrtoutput]
-        input_grads = [torch.mm(grad, self.weight.data) for grad in gradwrtoutput]
-        self.weight.accumulate_grad(*weight_grads)
+        check_inputs(gradwrtoutput)
+        grad = gradwrtoutput[0]
+        weight_grad = torch.mm(grad.T, self.input)
+        bias_grad = grad
+        input_grad = torch.mm(grad, self.weight.data)
+        self.weight.accumulate_grad(weight_grad)
 
         if self.bias is not None:
-            self.bias.accumulate_grad(*bias_grads)
+            self.bias.accumulate_grad(bias_grad)
         
-        return input_grads[0] if len(input_grads) == 1 else input_grads
+        return input_grad
 
 
 class ReLU(Module):
@@ -70,13 +74,16 @@ class ReLU(Module):
         self.input = None
     
     def forward(self, *input):
-        self.input = input
-        outputs = [relu(x) for x in input]
-        return outputs[0] if len(outputs) == 1 else outputs
+        check_inputs(input)
+        self.input = input[0]
+        output = make_gtensor(relu(self.input), self, self.input)
+        return output
     
     def backward(self, *gradwrtoutput):
-        input_grads = [grad * torch.where(self.input[index] > 0, 1, 0) for index, grad in enumerate(gradwrtoutput)]
-        return input_grads[0] if len(input_grads) == 1 else input_grads
+        check_inputs(gradwrtoutput)
+        grad = gradwrtoutput[0]
+        input_grad = grad * torch.where(self.input > 0, 1, 0)
+        return input_grad
 
 
 class Sigmoid(Module):
@@ -85,11 +92,48 @@ class Sigmoid(Module):
         self.input = None
     
     def forward(self, *input):
-        self.input = input
-        outputs = [sigmoid(x) for x in input]
-        return outputs[0] if len(outputs) == 1 else outputs
+        check_inputs(input)
+        self.input = input[0]
+        output = make_gtensor(sigmoid(self.input), self, self.input)
+        return output
     
     def backward(self, *gradwrtoutput):
-        input_sigmoids = [sigmoid(x) for x in self.input]
-        input_grads = [grad * input_sigmoids[index] * (1-input_sigmoids[index]) for index, grad in enumerate(gradwrtoutput)]
-        return input_grads[0] if len(input_grads) == 1 else input_grads
+        check_inputs(gradwrtoutput)
+        grad = gradwrtoutput[0]
+        input_sigmoid = sigmoid(self.input)
+        input_grad = grad * input_sigmoid * (1-input_sigmoid)
+        return input_grad
+
+
+class MSELoss(Module):
+    def __init__(self, reduction="mean") -> None:
+        super().__init__("MSELoss")
+        self.reduction = reduction
+        self.input = None
+        self.target = None
+    
+    def forward(self, *input):
+        check_inputs(input, 2)
+        self.input = input[0]
+        self.target = input[1]
+        error = (self.input - self.target) ** 2
+        loss = error
+
+        if self.reduction == "sum":
+            loss = torch.sum(error)
+        elif self.reduction == "mean":
+            loss = torch.mean(error)
+        
+        return make_gtensor(loss, self, [self.input, self.target])
+    
+    def backward(self, *gradwrtoutput):
+        check_inputs(gradwrtoutput)
+        grad = gradwrtoutput[0]
+        input_grad = 2 * (self.input - self.target)
+
+        if self.reduction == "sum":
+            input_grad = torch.sum(input_grad)
+        elif self.reduction == "mean":
+            input_grad = torch.mean(input_grad)
+        
+        return grad * input_grad
