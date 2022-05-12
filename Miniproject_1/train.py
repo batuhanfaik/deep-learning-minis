@@ -10,7 +10,7 @@ from utils import psnr
 from model import Model
 
 DATA_PATH = 'miniproject_dataset/'
-OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
+OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel_v3.pth')
 SHUFFLE_DATA = True
 
 
@@ -46,12 +46,12 @@ def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
 
 
 if __name__ == '__main__':
-    num_epochs = 1000
-    batch_size = 10240
+    num_epochs = 100
+    batch_size = 1024
     # Validation step is optional
     validation_frequency = 1
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
     train_input, train_target = get_data(mode='train', device=device)
     val_input, val_target = get_data(mode='val', device=device)
 
@@ -70,11 +70,11 @@ if __name__ == '__main__':
     # Train the model
     model.train(train_input, train_target, num_epochs)
     # Load the pretrained model
-    # model.load_pretrained_model()
+    # model.load_pretrained_model(OUTPUT_MODEL_PATH)
     # Evaluate the model
     prediction = model.predict(val_input)
     # Check the PSNR
-    psnr_val = psnr(prediction, val_target)
+    psnr_val = psnr(prediction, val_target, device=device)
     print(f'PSNR: {psnr_val:.6f} dB')
     # Save the best model
     model.save_best_model(OUTPUT_MODEL_PATH)

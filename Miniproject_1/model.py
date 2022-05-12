@@ -1,4 +1,4 @@
-from typing import Union, OrderedDict
+from typing import Union
 from pathlib import Path
 
 from utils import GORA
@@ -10,7 +10,7 @@ import time
 class Model:
     def __init__(self) -> None:
         # Initialize model
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
         self.model = GORA().to(self.device)
         # Set the parameters
         self.optimizer = self.__get_optimizer()
@@ -20,7 +20,7 @@ class Model:
         # Validation data for performance tracking
         self.val_input, self.val_target = None, None
         self.validate_every = 0
-        self.best_model = {'model': OrderedDict[str, torch.Tensor], 'loss': float('inf')}
+        self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
 
     def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
