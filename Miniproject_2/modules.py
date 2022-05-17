@@ -1,4 +1,3 @@
-
 import torch
 
 from tensor import make_gtensor
@@ -125,3 +124,27 @@ class MSELoss(Module):
             input_grad = input_grad / len(self.input)
         
         return grad * input_grad
+    
+
+class Conv2D(Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
+        super().__init__("Conv2D")
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        # if kernel size/padding is a single int = k, extend it to a (k x k) tuple
+        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+        self.padding = padding
+        
+        # ignor stride and dilation for now...
+        self.stride = stride
+        self.dilation = dilation
+        
+        # initialize and register the kernels - each kernel is a tensor of size (K x K x C)
+        self.kernels = [Parameter(torch.random(self.kernel_size + (self.in_channels)) for _ in out_channels)]
+        self.register
+    
+    def forward(self, *input):
+        pass
+    
+    def backward(self, *gradwrtoutput):
+        pass
