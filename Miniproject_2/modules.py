@@ -3,7 +3,7 @@ import torch
 from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
-from functional import linear, relu, sigmoid
+from functional import linear, relu, sigmoid, conv2d
 from utils import check_inputs, get_gradient
 
 class Sequential(Module):
@@ -135,16 +135,20 @@ class Conv2D(Module):
         self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
         self.padding = padding
         
-        # ignor stride and dilation for now...
+        # disregard stride and dilation for now...
         self.stride = stride
         self.dilation = dilation
         
-        # initialize and register the kernels - each kernel is a tensor of size (K x K x C)
-        self.kernels = [Parameter(torch.random(self.kernel_size + (self.in_channels)) for _ in out_channels)]
-        self.register
+        # initialize and register the kernels - we want out_channels kernels 
+        # each of size in_channels x kernel_h x kernel_w
+        self.kernels = Parameter(torch.rand((self.out_channels, self.in_channels) + self.kernel_size))
+        self.register_parameter("kernels", self.kernels)
     
-    def forward(self, *input):
-        pass
+    def forward(self, *input_):
+        check_inputs(input_)
+        self.input_ = input_[0]                             
+        output = make_gtensor(conv2d(self.input_, self.kernels, self.padding), self, self.input_)
+        return output
     
     def backward(self, *gradwrtoutput):
         pass
