@@ -67,6 +67,11 @@ class ConvTranspose2d(Module):
                  output_padding=0, groups=1, bias=True, dilation=1,
                  padding_mode='zeros', device=None, dtype=None) -> None:
         super().__init__('ConvTranspose2d')
+        # Check if kernel size is a tuple of length 2 or int
+        assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else isinstance(kernel_size, int)
+        # check if kernel size is int or tuple
+        if isinstance(kernel_size, int):
+            kernel_size = (kernel_size, kernel_size)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
@@ -74,8 +79,8 @@ class ConvTranspose2d(Module):
         self.padding = padding
         self.output_padding = output_padding
         self.groups = groups
-        self.weight = Parameter(torch.empty((out_dim, in_dim)))
-        self.bias = Parameter(torch.empty(out_dim)) if bias else None
+        self.weight = Parameter(torch.empty((self.in_channels, self.out_channels//self.groups, self.kernel_size[0], self.kernel_size[1])))
+        self.bias = Parameter(torch.empty(self.out_channels)) if bias else None
         self.dilation = dilation
         self.padding_mode = padding_mode
         self.device = device
