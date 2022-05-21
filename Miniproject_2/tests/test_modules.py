@@ -1,5 +1,7 @@
 import torch
 import unittest
+import sys
+sys.path.append("..")
 
 from modules import Linear, ConvTranspose2d, ReLU, Sigmoid, Sequential, MSELoss
 from tensor import GTensor

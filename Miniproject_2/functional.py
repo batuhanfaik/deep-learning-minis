@@ -13,7 +13,7 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
     Returns:
         torch.Tensor: Transformed input
     """
-    output = torch.mm(x, weight.T)
+    output = x.mm(weight.T)
 
     if bias is not None:
         output += bias
@@ -21,7 +21,7 @@ def linear(x: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] =
     return output
 
 def relu(x: torch.Tensor) -> torch.Tensor:
-    return torch.maximum(torch.tensor(0), x)
+    return x.maximum(torch.tensor(0))
 
 def sigmoid(x: torch.Tensor) -> torch.Tensor:
     return x.sigmoid()

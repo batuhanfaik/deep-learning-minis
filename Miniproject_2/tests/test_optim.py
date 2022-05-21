@@ -1,5 +1,7 @@
 import unittest
 import torch
+import sys
+sys.path.append("..")
 
 from optim import SGD
 from modules import Linear, ReLU, Sequential, MSELoss
