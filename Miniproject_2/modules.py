@@ -50,9 +50,9 @@ class Linear(Module):
     
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        weight_grad = torch.mm(grad.T, self.input)
+        weight_grad = grad.T.mm(self.input)
         bias_grad = grad
-        input_grad = torch.mm(grad, self.weight.data)
+        input_grad = grad.mm(self.weight.data)
         self.weight.accumulate_grad(weight_grad)
 
         if self.bias is not None:

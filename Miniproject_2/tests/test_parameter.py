@@ -1,5 +1,7 @@
 import torch
 import unittest
+import sys
+sys.path.append("..")
 
 from parameter import Parameter
 
