@@ -23,3 +23,6 @@ class TestFunctional(unittest.TestCase):
         x = torch.tensor([0, 1])
         out = sigmoid(x)
         self.assertTrue(torch.equal(out, torch.tensor([0.5, 1 / (1 + 1/torch.e)])))
+    
+    def test_conv2d(self):
+        print("hi")

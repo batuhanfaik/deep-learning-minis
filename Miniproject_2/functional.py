@@ -26,7 +26,7 @@ def relu(x: torch.Tensor) -> torch.Tensor:
 def sigmoid(x: torch.Tensor) -> torch.Tensor:
     return x.sigmoid()
 
-def conv2d(x: torch.Tensor, kernels: torch.Tesnor, padding: int):
+def conv2d(x: torch.Tensor, kernels: torch.Tesnor, padding: int, stride: int):
     # input size is (batch_size x channels x height x width)
     N_in, C_in, H_in, W_in = x.shape
     
@@ -34,8 +34,8 @@ def conv2d(x: torch.Tensor, kernels: torch.Tesnor, padding: int):
     N_ker, C_ker, H_ker, W_ker = kernels.shape
     
     # calculate output shape (based on https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html)
-    H_out = H_in - H_ker + 1 + 2 * padding
-    W_out = W_in - W_ker + 1 + 2 * padding
+    H_out = H_in - H_ker + 1 + 2 * padding # take into account stride
+    W_out = W_in - W_ker + 1 + 2 * padding 
     
     # check whether the number of channels in the input is correct
     if C_in != C_ker: raise ValueError("Numbers of channels in the input and kernel are different.")
@@ -43,7 +43,7 @@ def conv2d(x: torch.Tensor, kernels: torch.Tesnor, padding: int):
     # pad input
     if padding > 0:
         # can we modify the input tensor here or should we create a new one?
-        input_ = torch.zeros(N_in, C_in, H_in, W_in)
+        input_ = torch.zeros(N_in, C_in, H_in + 2*padding, W_in + 2*padding) # wrong? 
         for n in range(N_in):
             for c in range(C_in):
                 input_[n][c][padding:-padding][padding:-padding] = x[n][c]
@@ -54,12 +54,20 @@ def conv2d(x: torch.Tensor, kernels: torch.Tesnor, padding: int):
     output = torch.zeros(N_in, N_ker, H_out, W_out)
     
     for n in range(N_in):
-        for kernel in range(N_ker):
-            for i in range(H_out):
-                for j in range(W_out):
-                    for c in range(C_in):
+        for kernel_no in range(N_ker):
+            for C_no in range(C_in):
+                kernel = kernels[kernel_no][C_no]
+                image = input_[n][C_no]
+                # unfold the image
+                image_unfold = torch.nn.unfold(image, kernel.shape)
+                kernel_row = kernen.reshape((1, -1))
+                # we want to flatten the kernel 
+                
+            # for i in range(H_out):
+                # for j in range(W_out):
+                    # for c in range(C_in):
                         # this I am not sure of - probably use torch.tensordot?
-                        output[n][kernel][i][j] += torch.mm(input_[n][c][???][???], kernels[kernel][c].T)
+                        # output[n][kernel][i][j] += torch.mm(input_[n][c][???][???], kernels[kernel][c].T)
     
     
     return output
