@@ -51,9 +51,9 @@ class Linear(Module):
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        weight_grad = torch.mm(grad.T, self.input)
+        weight_grad = grad.T.mm(self.input)
         bias_grad = grad
-        input_grad = torch.mm(grad, self.weight.data)
+        input_grad = grad.mm(self.weight.data)
         self.weight.accumulate_grad(weight_grad)
 
         if self.bias is not None:
@@ -119,7 +119,7 @@ class ReLU(Module):
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        input_grad = grad * torch.where(self.input > 0, 1, 0)
+        input_grad = grad * (self.input > 0).int()
         return input_grad
 
 
@@ -156,9 +156,9 @@ class MSELoss(Module):
         loss = error
 
         if self.reduction == "sum":
-            loss = torch.sum(error, dim=0)
+            loss = error.sum(dim=0)
         elif self.reduction == "mean":
-            loss = torch.mean(error, dim=0)
+            loss = error.mean(dim=0)
 
         return make_gtensor(loss, self, [self.input, self.target])
 
