@@ -66,9 +66,7 @@ class Linear(Module):
 
 class ConvTranspose2d(Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
-                 groups=1,
-                 bias=True, dilation=1, padding_mode='zeros', device=None,
-                 dtype=None) -> None:
+                 groups=1, bias=True, dilation=1, padding_mode='zeros') -> None:
         super().__init__('ConvTranspose2d')
         # Check if kernel size is a tuple of length 2 or int
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else isinstance(
@@ -97,31 +95,52 @@ class ConvTranspose2d(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
+        self.groups = groups
+        self.weight = Parameter(torch.rand((self.in_channels,
+                                            self.out_channels // self.groups,
+                                            self.kernel_size[0], self.kernel_size[1])))
+        self.bias = Parameter(torch.rand(self.out_channels)) if bias else None
         self.stride = stride
         self.padding = padding
-        self.groups = groups
-        self.weight = torch.empty((self.in_channels, self.out_channels // self.groups,
-                                   self.kernel_size[0], self.kernel_size[1]))
-        self.bias = torch.empty(self.out_channels) if bias else None
         self.dilation = dilation
         self.padding_mode = padding_mode
-        self.__init_params()
+        self.input_ = None
 
     def forward(self, *input):
         check_inputs(input[0].shape, length=4)
         tensor_in = input[0]
-        output = make_gtensor(
-            convtranspose2d(tensor_in, self.in_channels, self.out_channels,
-                            self.kernel_size, self.weight, self.bias, self.stride,
-                            self.padding, self.dilation, self.groups))
+        self.input_ = tensor_in
+        out = convtranspose2d(tensor_in, self.in_channels, self.out_channels,
+                              self.kernel_size, self.weight, self.bias,
+                              self.stride, self.padding, self.dilation)
+        output = make_gtensor(out)
         return output
 
     def backward(self, *gradwrtoutput):
-        raise NotImplementedError
-
-    def __init_params(self):
-        self.weight = Parameter(torch.rand(self.weight.shape))
-        self.bias = Parameter(torch.rand(self.bias.shape)) if self.bias else None
+        grad = get_gradient(gradwrtoutput)
+        batch_size, out_channels, out_height, out_width = grad.shape
+        output_grad = unfold(grad, kernel_size=self.kernel_size, dilation=self.dilation,
+                             padding=self.padding, stride=self.stride)
+        weight_grad = output_grad.clone()
+        for in_dim in range(len(weight_grad.shape) - 1, 0, -1):
+            weight_grad = weight_grad.transpose(in_dim, in_dim - 1)
+        tensor_in = self.input_
+        for in_dim in range(len(tensor_in.shape) - 1):
+            tensor_in = tensor_in.transpose(in_dim, in_dim + 1)
+        tensor_in = tensor_in.reshape(self.in_channels, -1)
+        weight_grad = tensor_in.matmul(
+            weight_grad.reshape(tensor_in.shape[1], -1)).reshape(self.weight.shape)
+        self.weight.accumulate_grad(weight_grad)
+        if self.bias:
+            bias_grad = grad.sum(dim=(0, 2, 3))
+            self.bias.accumulate_grad(bias_grad)
+        in_height = (out_height + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) // self.stride[0] + 1
+        in_width = (out_width + 2 * self.padding[1] - self.dilation[1] *
+                    (self.kernel_size[1] - 1) - 1) // self.stride[1] + 1
+        input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
+        output = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
+        return output
 
 
 class ReLU(Module):

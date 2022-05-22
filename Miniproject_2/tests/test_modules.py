@@ -1,6 +1,8 @@
 import torch
+from torch import autograd
 import unittest
 import sys
+
 sys.path.append("..")
 
 from modules import Linear, ConvTranspose2d, ReLU, Sigmoid, Sequential, MSELoss
@@ -24,16 +26,43 @@ class TestModules(unittest.TestCase):
         # Create a 1x1x3x3 input tensor
         x = torch.tensor([[[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]]])
         # apply transpose convolution
-        torch_conv = torch.nn.ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=False)
+        torch_conv = torch.nn.ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0,
+                                              bias=True)
         torch_conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        torch_conv.bias.data = torch.tensor([5.0])
         # apply kernel
         torch_y = torch_conv(x)
         # apply transpose convolution with our implementation
-        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=False)
+        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
         conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        conv.bias.data = torch.tensor([5.0])
         # apply kernel
         y = conv(x)
         self.assertTrue(torch.equal(y, torch_y))
+
+    def test_convtranspose2d_backward(self):
+        x = torch.tensor([[[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]]],
+                         requires_grad=True)
+        # apply transpose convolution using torch
+        torch_conv = torch.nn.ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0,
+                                              bias=True)
+        torch_conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        torch_conv.bias.data = torch.tensor([5.0])
+        torch_y = torch_conv(x)
+        # autograd backwards
+        autograd.backward(torch_y, torch.ones_like(torch_y))
+        torch_x_grad = x.grad.clone()
+        # zero gradients
+        x.grad.zero_()
+        # apply transpose convolution with our implementation
+        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
+        conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        conv.bias.data = torch.tensor([5.0])
+        y = conv(x)
+        # our backwards
+        our_x_grad = conv.backward(torch.ones_like(y))
+        # compare gradients
+        self.assertTrue(torch.equal(our_x_grad, torch_x_grad))
 
     def test_relu(self):
         x = torch.tensor([2.0, -5.0, 3.0, 0.0])

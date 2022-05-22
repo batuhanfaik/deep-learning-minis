@@ -11,6 +11,7 @@ class Parameter:
         self.data = data
         self.requires_grad = requires_grad
         self.grad = torch.tensor(0)
+        self.shape = self.data.shape
 
     def accumulate_grad(self, *grads: torch.Tensor) -> torch.Tensor:
         if self.requires_grad:

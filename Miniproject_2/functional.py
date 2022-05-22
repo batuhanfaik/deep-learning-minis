@@ -25,7 +25,9 @@ def linear(x: torch.Tensor, weight: torch.Tensor,
 
 
 def convtranspose2d(tensor_in, in_channels, out_channels, kernel_size, weight, bias,
-                    stride, padding, dilation, groups):
+                    stride, padding, dilation):
+    assert in_channels == tensor_in.shape[1],\
+        "in_channels of layer must be equal to in_channels of input tensor"
     batch_size, in_channels, in_height, in_width = tensor_in.shape
     # Take batch last
     for in_dim in range(len(tensor_in.shape) - 1):
