@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, Union
+from functools import reduce
 
 import torch
 from torch.nn.functional import fold, unfold
@@ -7,13 +8,17 @@ from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
 from functional import linear, relu, sigmoid, convtranspose2d, max_pool2d
-from utils import check_inputs, get_gradient
+from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 
 
 class Sequential(Module):
     def __init__(self, *modules) -> None:
         super().__init__('Sequential')
         self.modules = modules
+
+        for i, module in enumerate(modules):
+            for name, parameter in module.named_parameters():
+                self.register_parameter(f"{module.name}{i}.{name}", parameter)
 
     def forward(self, *input):
         check_inputs(input)
@@ -53,10 +58,10 @@ class Linear(Module):
         return output
 
     def backward(self, *gradwrtoutput):
-        grad = get_gradient(gradwrtoutput)
-        weight_grad = grad.T.mm(self.input_)
-        bias_grad = grad
-        input_grad = grad.mm(self.weight.data)
+        output_grad = get_gradient(gradwrtoutput)
+        weight_grad = output_grad.T.mm(self.input_)
+        bias_grad = output_grad.T.mm(ones((self.input_.shape[0], 1))).squeeze()
+        input_grad = output_grad.mm(self.weight.data)
         self.weight.accumulate_grad(weight_grad)
 
         if self.bias is not None:
@@ -97,10 +102,10 @@ class ConvTranspose2d(Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.groups = groups
-        self.weight = Parameter(torch.rand((self.in_channels,
+        self.weight = Parameter(torch.empty((self.in_channels,
                                             self.out_channels // self.groups,
                                             self.kernel_size[0], self.kernel_size[1])))
-        self.bias = Parameter(torch.rand(self.out_channels)) if bias else None
+        self.bias = Parameter(torch.empty(self.out_channels)) if bias else None
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -200,13 +205,17 @@ class MSELoss(Module):
         check_inputs(input, 2)
         self.input_ = input[0]
         self.target = input[1]
+
+        if self.input_.shape != self.target.shape:
+            raise ValueError("Input and target shapes should be same")
+
         error = (self.input_ - self.target) ** 2
         loss = error
 
         if self.reduction == "sum":
-            loss = error.sum(dim=0)
+            loss = error.sum()
         elif self.reduction == "mean":
-            loss = error.mean(dim=0)
+            loss = error.mean()
 
         return make_gtensor(loss, self, [self.input_, self.target])
 
@@ -215,7 +224,7 @@ class MSELoss(Module):
         input_grad = 2 * (self.input_ - self.target)
 
         if self.reduction == "mean":
-            input_grad = input_grad / len(self.input_)
+            input_grad = input_grad / reduce(lambda a, b: a*b, self.input_.shape)
 
         return grad * input_grad
 
@@ -250,7 +259,7 @@ class MaxPool2d(Module):
         for ch in range(C):
             input_folded = unfold(self.input_[:, ch, :, :].unsqueeze(1), kernel_size=self.kernel_size,
                                   stride=self.stride, padding=self.padding, dilation=self.dilation)
-            input_grad = torch.zeros_like(input_folded)
+            input_grad = zeros_like(input_folded)
             input_grad = input_grad.scatter(1, input_folded.argmax(dim=1, keepdims=True), 1)
             input_grad = input_grad * output_grad[:, ch, :, :].reshape((N, 1, -1))
             input_grad = fold(input_grad, output_size=(H_in, W_in), kernel_size=self.kernel_size,

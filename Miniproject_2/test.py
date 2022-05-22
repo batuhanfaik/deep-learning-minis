@@ -4,17 +4,19 @@ import torch
 from modules import MaxPool2d
 
 from torch import autograd
-x = torch.rand((2, 3, 4, 4), requires_grad=True)
-torch_maxpool = torch.nn.MaxPool2d(kernel_size=2, stride=1)
-maxpool = MaxPool2d(kernel_size=2, stride=1)
-torch_out = torch_maxpool(x)
-out = maxpool(x)
-# self.assertTrue(torch.isclose(torch_out, out).all())
 
-torch.autograd.backward(torch_out, torch.ones_like(torch_out))
-torch_grad = x.grad
-grad = maxpool.backward(torch.ones_like(out))
-print(torch_grad.shape, grad.shape)
-print(torch_grad)
-print(grad)
-# self.assertTrue(torch.isclose(torch_grad, grad).all())
+from modules import MSELoss
+
+x = torch.rand((3, 4))
+y = torch.rand((3, 4))
+torch_loss = torch.nn.MSELoss()
+loss = MSELoss()
+torch_out = torch_loss(x, y)
+out = loss(x, y)
+print(torch_out)
+print(out)
+# self.assertTrue(torch.allclose(torch_out, out))
+# self.assertEqual(torch_out.shape, out.shape)
+# self.assertTrue(isinstance(out, GTensor))
+# self.assertTrue(torch.equal(out.get_inputs()[0], x))
+# self.assertTrue(torch.equal(out.get_inputs()[1], y))
