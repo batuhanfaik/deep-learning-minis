@@ -1,12 +1,20 @@
 
 import torch
 
-from modules import Linear, ReLU, Sequential, MSELoss
+from modules import MaxPool2d
 
-x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-y = torch.tensor([[0], [1]])
-model = Sequential(Linear(2, 4), ReLU(), Linear(4, 1))
-out = model(x)
-criterion = MSELoss()
-loss = criterion(out, y)
-loss.backward()
+from torch import autograd
+x = torch.rand((2, 3, 4, 4), requires_grad=True)
+torch_maxpool = torch.nn.MaxPool2d(kernel_size=2, stride=1)
+maxpool = MaxPool2d(kernel_size=2, stride=1)
+torch_out = torch_maxpool(x)
+out = maxpool(x)
+# self.assertTrue(torch.isclose(torch_out, out).all())
+
+torch.autograd.backward(torch_out, torch.ones_like(torch_out))
+torch_grad = x.grad
+grad = maxpool.backward(torch.ones_like(out))
+print(torch_grad.shape, grad.shape)
+print(torch_grad)
+print(grad)
+# self.assertTrue(torch.isclose(torch_grad, grad).all())

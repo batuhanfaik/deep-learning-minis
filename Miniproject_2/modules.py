@@ -1,11 +1,12 @@
+from typing import Optional, Tuple, Union
+
 import torch
 from torch.nn.functional import fold, unfold
-from torch.nn.init import xavier_uniform_
 
 from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
-from functional import linear, relu, sigmoid, convtranspose2d
+from functional import linear, relu, sigmoid, convtranspose2d, max_pool2d
 from utils import check_inputs, get_gradient
 
 
@@ -40,20 +41,20 @@ class Linear(Module):
         # TODO: implement Xavier initialization
         self.weight = Parameter(torch.empty((out_dim, in_dim)))
         self.bias = Parameter(torch.empty(out_dim)) if bias else None
-        self.input = None
+        self.input_ = None
         self.register_parameter('weight', self.weight)
         self.register_parameter('bias', self.bias)
 
     def forward(self, *input):
         check_inputs(input)
-        self.input = input[0]
-        output = make_gtensor(linear(self.input, self.weight.data, self.bias.data),
-                              self, self.input)
+        self.input_ = input[0]
+        output = make_gtensor(linear(self.input_, self.weight.data, self.bias.data),
+                              self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        weight_grad = grad.T.mm(self.input)
+        weight_grad = grad.T.mm(self.input_)
         bias_grad = grad
         input_grad = grad.mm(self.weight.data)
         self.weight.accumulate_grad(weight_grad)
@@ -107,13 +108,14 @@ class ConvTranspose2d(Module):
         self.input_ = None
 
     def forward(self, *input):
+        check_inputs(input)
         check_inputs(input[0].shape, length=4)
         tensor_in = input[0]
         self.input_ = tensor_in
         out = convtranspose2d(tensor_in, self.in_channels, self.out_channels,
                               self.kernel_size, self.weight, self.bias,
                               self.stride, self.padding, self.dilation)
-        output = make_gtensor(out)
+        output = make_gtensor(out, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -122,58 +124,67 @@ class ConvTranspose2d(Module):
         output_grad = unfold(grad, kernel_size=self.kernel_size, dilation=self.dilation,
                              padding=self.padding, stride=self.stride)
         weight_grad = output_grad.clone()
+
         for in_dim in range(len(weight_grad.shape) - 1, 0, -1):
             weight_grad = weight_grad.transpose(in_dim, in_dim - 1)
+
         tensor_in = self.input_
+
         for in_dim in range(len(tensor_in.shape) - 1):
             tensor_in = tensor_in.transpose(in_dim, in_dim + 1)
+
         tensor_in = tensor_in.reshape(self.in_channels, -1)
         weight_grad = tensor_in.matmul(
             weight_grad.reshape(tensor_in.shape[1], -1)).reshape(self.weight.shape)
         self.weight.accumulate_grad(weight_grad)
+
         if self.bias:
             bias_grad = grad.sum(dim=(0, 2, 3))
             self.bias.accumulate_grad(bias_grad)
+
         in_height = (out_height + 2 * self.padding[0] - self.dilation[0] *
                      (self.kernel_size[0] - 1) - 1) // self.stride[0] + 1
+
         in_width = (out_width + 2 * self.padding[1] - self.dilation[1] *
                     (self.kernel_size[1] - 1) - 1) // self.stride[1] + 1
+
         input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
         output = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
+
         return output
 
 
 class ReLU(Module):
     def __init__(self) -> None:
         super().__init__("ReLU")
-        self.input = None
+        self.input_ = None
 
     def forward(self, *input):
         check_inputs(input)
-        self.input = input[0]
-        output = make_gtensor(relu(self.input), self, self.input)
+        self.input_ = input[0]
+        output = make_gtensor(relu(self.input_), self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        input_grad = grad * (self.input > 0).int()
+        input_grad = grad * (self.input_ > 0).int()
         return input_grad
 
 
 class Sigmoid(Module):
     def __init__(self) -> None:
         super().__init__("Sigmoid")
-        self.input = None
+        self.input_ = None
 
     def forward(self, *input):
         check_inputs(input)
-        self.input = input[0]
-        output = make_gtensor(sigmoid(self.input), self, self.input)
+        self.input_ = input[0]
+        output = make_gtensor(sigmoid(self.input_), self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        input_sigmoid = sigmoid(self.input)
+        input_sigmoid = sigmoid(self.input_)
         input_grad = grad * input_sigmoid * (1 - input_sigmoid)
         return input_grad
 
@@ -182,14 +193,14 @@ class MSELoss(Module):
     def __init__(self, reduction="mean") -> None:
         super().__init__("MSELoss")
         self.reduction = reduction
-        self.input = None
+        self.input_ = None
         self.target = None
 
     def forward(self, *input):
         check_inputs(input, 2)
-        self.input = input[0]
+        self.input_ = input[0]
         self.target = input[1]
-        error = (self.input - self.target) ** 2
+        error = (self.input_ - self.target) ** 2
         loss = error
 
         if self.reduction == "sum":
@@ -197,13 +208,53 @@ class MSELoss(Module):
         elif self.reduction == "mean":
             loss = error.mean(dim=0)
 
-        return make_gtensor(loss, self, [self.input, self.target])
+        return make_gtensor(loss, self, [self.input_, self.target])
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
-        input_grad = 2 * (self.input - self.target)
+        input_grad = 2 * (self.input_ - self.target)
 
         if self.reduction == "mean":
-            input_grad = input_grad / len(self.input)
+            input_grad = input_grad / len(self.input_)
 
         return grad * input_grad
+
+
+class MaxPool2d(Module):
+    def __init__(self, kernel_size: Union[int, Tuple],
+                 stride: Optional[Union[int, Tuple]] = None,
+                 padding: Union[int, Tuple] = 0, dilation: Union[int, Tuple] = 1) -> None:
+        super().__init__("MaxPool2d")
+        self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+
+        if stride is None:
+            stride = kernel_size
+
+        self.stride = (stride, stride) if isinstance(stride, int) else stride
+        self.padding = (padding, padding) if isinstance(padding, int) else padding
+        self.dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
+    
+    def forward(self, *input):
+        check_inputs(input)
+        self.input_ = input[0]
+        pool_output = max_pool2d(self.input_, kernel_size=self.kernel_size,
+                                 stride=self.stride, padding=self.padding, dilation=self.dilation)
+        output = make_gtensor(pool_output, self, self.input_)
+        return output
+    
+    def backward(self, *gradwrtoutput):
+        output_grad = get_gradient(gradwrtoutput)
+        input_grads = []
+        N, C, H_in, W_in = self.input_.shape
+
+        for ch in range(C):
+            input_folded = unfold(self.input_[:, ch, :, :].unsqueeze(1), kernel_size=self.kernel_size,
+                                  stride=self.stride, padding=self.padding, dilation=self.dilation)
+            input_grad = torch.zeros_like(input_folded)
+            input_grad = input_grad.scatter(1, input_folded.argmax(dim=1, keepdims=True), 1)
+            input_grad = input_grad * output_grad[:, ch, :, :].reshape((N, 1, -1))
+            input_grad = fold(input_grad, output_size=(H_in, W_in), kernel_size=self.kernel_size,
+                              stride=self.stride, padding=self.padding, dilation=self.dilation)
+            input_grads.append(input_grad)
+        
+        return torch.cat(input_grads, dim=1)

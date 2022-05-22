@@ -5,7 +5,7 @@ import sys
 
 sys.path.append("..")
 
-from modules import Linear, ConvTranspose2d, ReLU, Sigmoid, Sequential, MSELoss
+from modules import Linear, ConvTranspose2d, ReLU, Sigmoid, Sequential, MSELoss, MaxPool2d
 from tensor import GTensor
 
 
@@ -126,3 +126,31 @@ class TestModules(unittest.TestCase):
         criterion = MSELoss()
         loss = criterion(out, y)
         loss.backward()
+
+    def test_max_pool2d(self):
+        x = torch.rand((2, 3, 4, 4))
+        torch_maxpool = torch.nn.MaxPool2d(kernel_size=2, stride=1)
+        maxpool = MaxPool2d(kernel_size=2, stride=1)
+        torch_out = torch_maxpool(x)
+        out = maxpool(x)
+        self.assertTrue(torch.isclose(torch_out, out).all())
+
+        x = torch.rand((2, 3, 32, 32))
+        torch_maxpool = torch.nn.MaxPool2d(kernel_size=4, stride=2, padding=2, dilation=4)
+        maxpool = MaxPool2d(kernel_size=4, stride=2, padding=2, dilation=4)
+        torch_out = torch_maxpool(x)
+        out = maxpool(x)
+        self.assertTrue(torch.isclose(torch_out, out).all())
+
+    def test_maxpool2d_backward(self):
+        x = torch.rand((2, 3, 32, 32), requires_grad=True)
+        torch_maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=2)
+        maxpool = MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=2)
+        torch_out = torch_maxpool(x)
+        out = maxpool(x)
+        self.assertTrue(torch.isclose(torch_out, out).all())
+
+        autograd.backward(torch_out, torch.ones_like(torch_out))
+        torch_grad = x.grad
+        grad = maxpool.backward(torch.ones_like(out))
+        self.assertTrue(torch.isclose(torch_grad, grad).all())
