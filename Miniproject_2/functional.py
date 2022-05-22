@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Union, Tuple
+from math import floor
 
 import torch
 from torch.nn.functional import fold, unfold
@@ -54,3 +55,31 @@ def relu(x: torch.Tensor) -> torch.Tensor:
 
 def sigmoid(x: torch.Tensor) -> torch.Tensor:
     return x.sigmoid()
+
+def max_pool2d(x: torch.Tensor, kernel_size: Union[int, Tuple],
+               stride: Optional[Union[int, Tuple]] = None,
+               padding: Union[int, Tuple] = 0, dilation: Union[int, Tuple] = 1):
+    kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+
+    if stride is None:
+        stride = kernel_size
+
+    stride = (stride, stride) if isinstance(stride, int) else stride
+    padding = (padding, padding) if isinstance(padding, int) else padding
+    dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
+
+    N, C, H_in, W_in = x.shape
+    H_out = floor((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+    W_out = floor((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+    
+    channel_outputs = []
+
+    for ch in range(C):
+        x_ch_unfolded = unfold(x[:, ch, :, :].unsqueeze(1), kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding)
+        x_ch_max, _ = x_ch_unfolded.max(dim=1, keepdim=True)
+        channel_outputs.append(x_ch_max.reshape((N, 1, H_out, W_out)))
+    
+    output = torch.cat(channel_outputs, dim=1)
+
+    return output
+
