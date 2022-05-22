@@ -1,9 +1,11 @@
 import torch
+from torch.nn.functional import fold, unfold
+from torch.nn.init import xavier_uniform_
 
 from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
-from functional import linear, relu, sigmoid
+from functional import linear, relu, sigmoid, convtranspose2d
 from utils import check_inputs, get_gradient
 
 
@@ -64,46 +66,62 @@ class Linear(Module):
 
 class ConvTranspose2d(Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
-                 output_padding=0, groups=1, bias=True, dilation=1,
-                 padding_mode='zeros', device=None, dtype=None) -> None:
+                 groups=1,
+                 bias=True, dilation=1, padding_mode='zeros', device=None,
+                 dtype=None) -> None:
         super().__init__('ConvTranspose2d')
         # Check if kernel size is a tuple of length 2 or int
-        assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else isinstance(kernel_size, int)
+        assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else isinstance(
+            kernel_size, int)
         # check if kernel size is int or tuple
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
+        # Check if stride is a tuple of length 2 or int
+        assert len(stride) == 2 if isinstance(stride, tuple) else isinstance(stride,
+                                                                             int)
+        # check if stride is int or tuple
+        if isinstance(stride, int):
+            stride = (stride, stride)
+        # Check if padding is a tuple of length 2 or int
+        assert len(padding) == 2 if isinstance(padding, tuple) else isinstance(padding,
+                                                                               int)
+        # check if padding is int or tuple
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        # Check if dilation is a tuple of length 2 or int
+        assert len(dilation) == 2 if isinstance(dilation, tuple) else isinstance(
+            dilation, int)
+        # check if dilation is int or tuple
+        if isinstance(dilation, int):
+            dilation = (dilation, dilation)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
-        self.output_padding = output_padding
         self.groups = groups
-        self.weight = Parameter(torch.empty((self.in_channels, self.out_channels//self.groups, self.kernel_size[0], self.kernel_size[1])))
-        self.bias = Parameter(torch.empty(self.out_channels)) if bias else None
+        self.weight = torch.empty((self.in_channels, self.out_channels // self.groups,
+                                   self.kernel_size[0], self.kernel_size[1]))
+        self.bias = torch.empty(self.out_channels) if bias else None
         self.dilation = dilation
         self.padding_mode = padding_mode
-        self.device = device
-        self.dtype = dtype
+        self.__init_params()
 
     def forward(self, *input):
-        check_inputs(input)
-        self.input = input[0]
-        output = make_gtensor(linear(self.input, self.weight.data, self.bias.data),
-                              self, self.input)
+        check_inputs(input[0].shape, length=4)
+        tensor_in = input[0]
+        output = make_gtensor(
+            convtranspose2d(tensor_in, self.in_channels, self.out_channels,
+                            self.kernel_size, self.weight, self.bias, self.stride,
+                            self.padding, self.dilation, self.groups))
         return output
 
     def backward(self, *gradwrtoutput):
-        grad = get_gradient(gradwrtoutput)
-        weight_grad = grad.T.mm(self.input)
-        bias_grad = grad
-        input_grad = grad.mm(self.weight.data)
-        self.weight.accumulate_grad(weight_grad)
+        raise NotImplementedError
 
-        if self.bias is not None:
-            self.bias.accumulate_grad(bias_grad)
-
-        return input_grad
+    def __init_params(self):
+        self.weight = Parameter(torch.rand(self.weight.shape))
+        self.bias = Parameter(torch.rand(self.bias.shape)) if self.bias else None
 
 
 class ReLU(Module):

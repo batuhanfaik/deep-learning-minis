@@ -21,16 +21,17 @@ class TestModules(unittest.TestCase):
         self.assertTrue(torch.equal(torch.mm(grads, linear.weight.data), out))
 
     def test_convtranspose2d(self):
-        # Create a 1x1x2x2 input tensor
-        x = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        # Create a 1x1x3x3 input tensor
+        x = torch.tensor([[[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]]])
         # apply transpose convolution
-        torch_conv = torch.nn.ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, output_padding=0, bias=False)
+        torch_conv = torch.nn.ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=False)
         torch_conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
         # apply kernel
         torch_y = torch_conv(x)
-        # apply kernel with our implementation
-        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, output_padding=0, bias=False)
+        # apply transpose convolution with our implementation
+        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=False)
         conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        # apply kernel
         y = conv(x)
         self.assertTrue(torch.equal(y, torch_y))
 
