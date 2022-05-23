@@ -1,5 +1,7 @@
 from typing import Optional, Tuple, Union
 from functools import reduce
+import random
+import math
 
 import torch
 from torch.nn.functional import fold, unfold
@@ -111,10 +113,16 @@ class Conv2d(Module):
         # initialize and register the kernels - we want out_channels kernels
         # each of size in_channels x kernel_h x kernel_w
         self.weight = Parameter(
-            torch.rand(self.out_channels, self.in_channels // self.groups,
-                       self.kernel_size[0], self.kernel_size[1]))
-        self.bias = Parameter(torch.rand(self.out_channels)) if bias else None
+            self.init_weights((self.out_channels, self.in_channels // self.groups,
+                               self.kernel_size[0], self.kernel_size[1])))
+        self.bias = Parameter(self.init_weights((self.out_channels,))) if bias else None
         self.register_parameter("weights", self.weight)
+        self.register_parameter("bias", self.bias)
+
+    def init_weights(self, shape):
+        k = self.groups / (self.in_channels * self.kernel_size[0] * self.kernel_size[1])
+        w = torch.tensor([random.uniform(-math.sqrt(k), math.sqrt(k)) for _ in range(reduce(lambda a,b: a*b, list(shape)))])
+        return w.reshape(shape)
 
     def forward(self, *input_):
         check_inputs(input_)
@@ -201,15 +209,22 @@ class ConvTranspose2d(Module):
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.groups = groups
-        self.weight = Parameter(torch.empty((self.in_channels,
+        self.weight = Parameter(self.init_weights((self.in_channels,
                                              self.out_channels // self.groups,
                                              self.kernel_size[0], self.kernel_size[1])))
-        self.bias = Parameter(torch.empty(self.out_channels)) if bias else None
+        self.bias = Parameter(self.init_weights((self.out_channels,))) if bias else None
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
         self.padding_mode = padding_mode
         self.input_ = None
+        self.register_parameter("weight", self.weight)
+        self.register_parameter("bias", self.bias)
+
+    def init_weights(self, shape):
+        k = self.groups / (self.out_channels * self.kernel_size[0] * self.kernel_size[1])
+        w = torch.tensor([random.uniform(-math.sqrt(k), math.sqrt(k)) for _ in range(reduce(lambda a,b: a*b, list(shape)))])
+        return w.reshape(shape)
 
     def forward(self, *input):
         check_inputs(input)
