@@ -6,6 +6,7 @@ class Module(object):
     def __init__(self, name: Optional[str] = None) -> None:
         self.name = name
         self._parameters = {}
+        self._training = True
 
     def register_parameter(self, name: str, parameter: Optional[Parameter] = None) -> None:
         self._parameters[name] = parameter
@@ -24,3 +25,13 @@ class Module(object):
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.forward(*args)
+    
+    def train(self):
+        self._training = True
+    
+    def eval(self):
+        self._training = False
+    
+    def zero_grad(self):
+        for parameter in self._parameters:
+            parameter.zero_grad()
