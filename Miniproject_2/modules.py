@@ -175,12 +175,12 @@ class Conv2d(Module):
         return input_grad
 
 
-class ConvTranspose2d(Module):
+class TransposeConv2d(Module):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple],
                  stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
                  groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1,
                  padding_mode: str = 'zeros') -> None:
-        super().__init__('ConvTranspose2d')
+        super().__init__('TransposeConv2d')
         # Check if kernel size is a tuple of length 2 or int
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
             isinstance(kernel_size, int)
@@ -307,9 +307,9 @@ class Sigmoid(Module):
         return input_grad
 
 
-class MSELoss(Module):
+class MSE(Module):
     def __init__(self, reduction: str = "mean") -> None:
-        super().__init__("MSELoss")
+        super().__init__("MSE")
         self.reduction = reduction
         self.input_ = None
         self.target = None

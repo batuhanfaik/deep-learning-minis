@@ -5,7 +5,7 @@ import sys
 
 sys.path.append("..")
 
-from modules import Linear, Conv2d, ConvTranspose2d, ReLU, Sigmoid, Sequential, MSELoss, MaxPool2d
+from modules import Linear, Conv2d, TransposeConv2d, ReLU, Sigmoid, Sequential, MSE, MaxPool2d
 from tensor import GTensor
 
 
@@ -91,7 +91,7 @@ class TestModules(unittest.TestCase):
         # apply kernel
         torch_y = torch_conv(x)
         # apply transpose convolution with our implementation
-        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
+        conv = TransposeConv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
         conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
         conv.bias.data = torch.tensor([5.0])
         # apply kernel
@@ -113,7 +113,7 @@ class TestModules(unittest.TestCase):
         # zero gradients
         x.grad.zero_()
         # apply transpose convolution with our implementation
-        conv = ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
+        conv = TransposeConv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
         conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
         conv.bias.data = torch.tensor([5.0])
         y = conv(x)
@@ -208,7 +208,7 @@ class TestModules(unittest.TestCase):
         x = torch.rand((3, 4))
         y = torch.rand((3, 4))
         torch_loss = torch.nn.MSELoss()
-        loss = MSELoss()
+        loss = MSE()
         torch_out = torch_loss(x, y)
         out = loss(x, y)
         self.assertTrue(torch.allclose(torch_out, out))
@@ -218,14 +218,14 @@ class TestModules(unittest.TestCase):
         self.assertTrue(torch.equal(out.get_inputs()[1], y))
 
         torch_loss = torch.nn.MSELoss(reduction="sum")
-        loss = MSELoss(reduction="sum")
+        loss = MSE(reduction="sum")
         torch_out = torch_loss(x, y)
         out = loss(x, y)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
 
         torch_loss = torch.nn.MSELoss(reduction='none')
-        loss = MSELoss(reduction='none')
+        loss = MSE(reduction='none')
         torch_out = torch_loss(x, y)
         out = loss(x, y)
         self.assertTrue(torch.allclose(torch_out, out))
@@ -235,7 +235,7 @@ class TestModules(unittest.TestCase):
         x = torch.rand((3, 4), requires_grad=True)
         y = torch.rand((3, 4), requires_grad=True)
         torch_loss = torch.nn.MSELoss()
-        loss = MSELoss()
+        loss = MSE()
         torch_out = torch_loss(x, y)
         out = loss(x, y)
         torch.autograd.backward(torch_out, torch.ones_like(torch_out))
@@ -246,7 +246,7 @@ class TestModules(unittest.TestCase):
         x = torch.rand((3, 4), requires_grad=True)
         y = torch.rand((3, 4), requires_grad=True)
         torch_loss = torch.nn.MSELoss(reduction="sum")
-        loss = MSELoss(reduction="sum")
+        loss = MSE(reduction="sum")
         torch_out = torch_loss(x, y)
         out = loss(x, y)
         torch.autograd.backward(torch_out, torch.ones_like(torch_out))

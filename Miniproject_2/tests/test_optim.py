@@ -4,7 +4,7 @@ import sys
 sys.path.append("..")
 
 from optim import SGD
-from modules import Linear, ReLU, Sequential, MSELoss, Sigmoid
+from modules import Linear, ReLU, Sequential, MSE, Sigmoid
 
 class TestOptim(unittest.TestCase):
     def test_sgd(self):
@@ -24,7 +24,7 @@ class TestOptim(unittest.TestCase):
         optimizer = SGD(model.parameters(), lr=0.001)
         optimizer.zero_grad()
         out = model(x)
-        criterion = MSELoss()
+        criterion = MSE()
         loss = criterion(out, y)
         loss.backward()
         optimizer.step()

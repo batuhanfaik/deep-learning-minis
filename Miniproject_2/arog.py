@@ -1,7 +1,7 @@
 import torch
 
 from module import Module
-from modules import Conv2d, ConvTranspose2d, ReLU, Sigmoid, MaxPool2d, Sequential
+from modules import Conv2d, TransposeConv2d, ReLU, Sigmoid, MaxPool2d, Sequential
 
 class AROG(Module):
     """
@@ -29,7 +29,7 @@ class AROG(Module):
         self._block3 = Sequential(
             Conv2d(24, 24, 3, stride=1, padding=1),
             ReLU(inplace=True),
-            ConvTranspose2d(24, 24, 3, stride=2, padding=1, output_padding=1))
+            TransposeConv2d(24, 24, 3, stride=2, padding=1, output_padding=1))
 
         # Layers: dec_conv3a, dec_conv3b, upsample2
         self._block4 = Sequential(
@@ -37,7 +37,7 @@ class AROG(Module):
             ReLU(inplace=True),
             Conv2d(48, 48, 3, stride=1, padding=1),
             ReLU(inplace=True),
-            ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
+            TransposeConv2d(48, 48, 3, stride=2, padding=1, output_padding=1))
 
         # Layers: dec_deconv(i)a, dec_deconv(i)b, upsample(i-1); i=2
         self._block5 = Sequential(
@@ -45,7 +45,7 @@ class AROG(Module):
             ReLU(inplace=True),
             Conv2d(48, 48, 3, stride=1, padding=1),
             ReLU(inplace=True),
-            ConvTranspose2d(48, 48, 3, stride=2, padding=1, output_padding=1))
+            TransposeConv2d(48, 48, 3, stride=2, padding=1, output_padding=1))
 
         # Layers: dec_conv1a, dec_conv1b, dec_conv1c,
         self._block6 = Sequential(

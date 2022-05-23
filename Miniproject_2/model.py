@@ -1,7 +1,7 @@
 import torch
 import time
 
-from modules import ReLU, Sigmoid, ConvTranspose2d, Sequential, MSELoss, Conv2d
+from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
 from optim import SGD
 from arog import AROG
 
@@ -13,12 +13,12 @@ class Model:
             ReLU(),
             Conv2d(24, 48, 3, stride=2),
             ReLU(),
-            ConvTranspose2d(48, 16, 3, stride=2),
+            TransposeConv2d(48, 16, 3, stride=2),
             ReLU(),
-            ConvTranspose2d(16, 3, 4, stride=2),
+            TransposeConv2d(16, 3, 4, stride=2),
             Sigmoid())
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
-        self.criterion = MSELoss()
+        self.criterion = MSE()
         self.validate_every = 0
         # self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
 

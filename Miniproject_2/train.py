@@ -7,7 +7,9 @@ import os
 from utils import psnr
 from model import Model
 
-DATA_PATH = '/Users/mismayil/Desktop/EPFL/W2022/DL/deep-learning-minis/Miniproject_2/miniproject_dataset/'
+# for testing
+# DATA_PATH = '/Users/mismayil/Desktop/EPFL/W2022/DL/deep-learning-minis/Miniproject_2/miniproject_dataset/'
+DATA_PATH = 'miniproject_dataset/'
 OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
 SHUFFLE_DATA = True
 
@@ -30,6 +32,7 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
 
 
 if __name__ == '__main__':
+    torch.set_grad_enabled(False)
     num_epochs = 100
     batch_size = 1024
     # Validation step is optional

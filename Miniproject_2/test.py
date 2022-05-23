@@ -5,12 +5,12 @@ from modules import MaxPool2d
 
 from torch import autograd
 
-from modules import MSELoss
+from modules import MSE
 
 x = torch.rand((3, 4))
 y = torch.rand((3, 4))
 torch_loss = torch.nn.MSELoss()
-loss = MSELoss()
+loss = MSE()
 torch_out = torch_loss(x, y)
 out = loss(x, y)
 print(torch_out)
