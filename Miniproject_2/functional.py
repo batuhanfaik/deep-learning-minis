@@ -27,7 +27,7 @@ def linear(x: torch.Tensor, weight: torch.Tensor,
 
 def convtranspose2d(tensor_in, in_channels, out_channels, kernel_size, weight, bias,
                     stride, padding, dilation):
-    assert in_channels == tensor_in.shape[1],\
+    assert in_channels == tensor_in.shape[1], \
         "in_channels of layer must be equal to in_channels of input tensor"
     batch_size, in_channels, in_height, in_width = tensor_in.shape
     # Take batch last
@@ -58,10 +58,12 @@ def relu(x: torch.Tensor) -> torch.Tensor:
 def sigmoid(x: torch.Tensor) -> torch.Tensor:
     return x.sigmoid()
 
+
 def max_pool2d(x: torch.Tensor, kernel_size: Union[int, Tuple],
                stride: Optional[Union[int, Tuple]] = None,
                padding: Union[int, Tuple] = 0, dilation: Union[int, Tuple] = 1):
-    kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+    kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size,
+                                                           int) else kernel_size
 
     if stride is None:
         stride = kernel_size
@@ -71,17 +73,19 @@ def max_pool2d(x: torch.Tensor, kernel_size: Union[int, Tuple],
     dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
 
     N, C, H_in, W_in = x.shape
-    H_out = floor((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
-    W_out = floor((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
-    
+    H_out = floor((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) /
+                  stride[0] + 1)
+    W_out = floor((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) /
+                  stride[1] + 1)
+
     channel_outputs = []
 
     for ch in range(C):
-        x_ch_unfolded = unfold(x[:, ch, :, :].unsqueeze(1), kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding)
+        x_ch_unfolded = unfold(x[:, ch, :, :].unsqueeze(1), kernel_size=kernel_size,
+                               stride=stride, dilation=dilation, padding=padding)
         x_ch_max, _ = x_ch_unfolded.max(dim=1, keepdim=True)
         channel_outputs.append(x_ch_max.reshape((N, 1, H_out, W_out)))
-    
+
     output = torch.cat(channel_outputs, dim=1)
 
     return output
-
