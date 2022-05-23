@@ -230,7 +230,7 @@ class TestModules(unittest.TestCase):
         out = loss(x, y)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-    
+
     def test_mseloss_backward(self):
         x = torch.rand((3, 4), requires_grad=True)
         y = torch.rand((3, 4), requires_grad=True)

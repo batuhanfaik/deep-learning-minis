@@ -7,7 +7,7 @@ from torch.nn.functional import fold, unfold
 from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
-from functional import linear, relu, sigmoid, convtranspose2d, max_pool2d
+from functional import linear, relu, sigmoid, conv2d, convtranspose2d, max_pool2d
 from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 
 
@@ -70,6 +70,38 @@ class Linear(Module):
         return input_grad
 
 
+class Conv2D(Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
+                 dilation=1):
+        super().__init__("Conv2D")
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        # if kernel size/padding is a single int = k, extend it to a (k x k) tuple
+        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (
+            kernel_size, kernel_size)
+        self.padding = padding
+
+        # disregard stride and dilation for now...
+        self.stride = stride
+        self.dilation = dilation
+
+        # initialize and register the kernels - we want out_channels kernels
+        # each of size in_channels x kernel_h x kernel_w
+        self.kernels = Parameter(
+            torch.rand((self.out_channels, self.in_channels) + self.kernel_size))
+        self.register_parameter("kernels", self.kernels)
+
+    def forward(self, *input_):
+        check_inputs(input_)
+        self.input_ = input_[0]
+        output = make_gtensor(conv2d(self.input_, self.kernels, self.padding), self,
+                              self.input_)
+        return output
+
+    def backward(self, *gradwrtoutput):
+        pass
+
+
 class ConvTranspose2d(Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
                  groups=1, bias=True, dilation=1, padding_mode='zeros') -> None:
@@ -103,8 +135,8 @@ class ConvTranspose2d(Module):
         self.kernel_size = kernel_size
         self.groups = groups
         self.weight = Parameter(torch.empty((self.in_channels,
-                                            self.out_channels // self.groups,
-                                            self.kernel_size[0], self.kernel_size[1])))
+                                             self.out_channels // self.groups,
+                                             self.kernel_size[0], self.kernel_size[1])))
         self.bias = Parameter(torch.empty(self.out_channels)) if bias else None
         self.stride = stride
         self.padding = padding
@@ -224,7 +256,7 @@ class MSELoss(Module):
         input_grad = 2 * (self.input_ - self.target)
 
         if self.reduction == "mean":
-            input_grad = input_grad / reduce(lambda a, b: a*b, self.input_.shape)
+            input_grad = input_grad / reduce(lambda a, b: a * b, self.input_.shape)
 
         return grad * input_grad
 
@@ -232,9 +264,11 @@ class MSELoss(Module):
 class MaxPool2d(Module):
     def __init__(self, kernel_size: Union[int, Tuple],
                  stride: Optional[Union[int, Tuple]] = None,
-                 padding: Union[int, Tuple] = 0, dilation: Union[int, Tuple] = 1) -> None:
+                 padding: Union[int, Tuple] = 0,
+                 dilation: Union[int, Tuple] = 1) -> None:
         super().__init__("MaxPool2d")
-        self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+        self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size,
+                                                                    int) else kernel_size
 
         if stride is None:
             stride = kernel_size
@@ -242,28 +276,35 @@ class MaxPool2d(Module):
         self.stride = (stride, stride) if isinstance(stride, int) else stride
         self.padding = (padding, padding) if isinstance(padding, int) else padding
         self.dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
-    
+
     def forward(self, *input):
         check_inputs(input)
         self.input_ = input[0]
         pool_output = max_pool2d(self.input_, kernel_size=self.kernel_size,
-                                 stride=self.stride, padding=self.padding, dilation=self.dilation)
+                                 stride=self.stride, padding=self.padding,
+                                 dilation=self.dilation)
         output = make_gtensor(pool_output, self, self.input_)
         return output
-    
+
     def backward(self, *gradwrtoutput):
         output_grad = get_gradient(gradwrtoutput)
         input_grads = []
         N, C, H_in, W_in = self.input_.shape
 
         for ch in range(C):
-            input_folded = unfold(self.input_[:, ch, :, :].unsqueeze(1), kernel_size=self.kernel_size,
-                                  stride=self.stride, padding=self.padding, dilation=self.dilation)
+            input_folded = unfold(self.input_[:, ch, :, :].unsqueeze(1),
+                                  kernel_size=self.kernel_size,
+                                  stride=self.stride, padding=self.padding,
+                                  dilation=self.dilation)
             input_grad = zeros_like(input_folded)
-            input_grad = input_grad.scatter(1, input_folded.argmax(dim=1, keepdims=True), 1)
+            input_grad = input_grad.scatter(1,
+                                            input_folded.argmax(dim=1, keepdims=True),
+                                            1)
             input_grad = input_grad * output_grad[:, ch, :, :].reshape((N, 1, -1))
-            input_grad = fold(input_grad, output_size=(H_in, W_in), kernel_size=self.kernel_size,
-                              stride=self.stride, padding=self.padding, dilation=self.dilation)
+            input_grad = fold(input_grad, output_size=(H_in, W_in),
+                              kernel_size=self.kernel_size,
+                              stride=self.stride, padding=self.padding,
+                              dilation=self.dilation)
             input_grads.append(input_grad)
-        
+
         return torch.cat(input_grads, dim=1)
