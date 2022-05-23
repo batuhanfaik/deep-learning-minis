@@ -25,13 +25,13 @@ def linear(x: torch.Tensor, weight: torch.Tensor,
     return output
 
 
-def conv2d(input_: torch.Tensor, kernels: torch.Tensor, padding: int, stride: int,
-           dilation: int):
+def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, padding: int,
+           stride: int, dilation: int):
     # input size is (batch_size x channels x height x width)
     N_in, C_in, H_in, W_in = input_.shape
 
     # kernels are of size (out_channels, in_channels, kernel_height, kernel_width)
-    C_out, C_ker, H_ker, W_ker = kernels.shape
+    C_out, C_ker, H_ker, W_ker = weight.shape
 
     # calculate output shape (based on https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html)
     H_out = floor((H_in + 2 * padding - dilation * (H_ker - 1) - 1) / stride + 1)
@@ -43,7 +43,7 @@ def conv2d(input_: torch.Tensor, kernels: torch.Tensor, padding: int, stride: in
     # compute convolutions
     input_unfolded = unfold(input_, kernel_size=(H_ker, W_ker), padding=padding,
                             stride=stride, dilation=dilation)
-    kernels_flattened = kernels.reshape(C_out, C_ker * H_ker * W_ker).T
+    kernels_flattened = weight.reshape(C_out, C_ker * H_ker * W_ker).T
 
     # print("Shapes: ", input_unfolded.shape, kernels_flattened.shape)
     output = torch.empty(N_in, C_out, H_out, W_out)
@@ -53,6 +53,9 @@ def conv2d(input_: torch.Tensor, kernels: torch.Tensor, padding: int, stride: in
             row = input_unfolded[n].transpose(0, 1).mm(
                 kernels_flattened[:, k].unsqueeze(1))
             output[n][k] = row.reshape(H_out, W_out)
+
+    if bias:
+        output += bias.reshape(1, -1)
 
     return output
 

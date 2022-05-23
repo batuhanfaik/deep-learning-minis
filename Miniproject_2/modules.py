@@ -70,31 +70,54 @@ class Linear(Module):
         return input_grad
 
 
-class Conv2D(Module):
+class Conv2d(Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
-                 dilation=1):
-        super().__init__("Conv2D")
+                 groups=1, bias=True, dilation=1, padding_mode='zeros') -> None:
+        super().__init__("Conv2d")
+        # Check if kernel size is a tuple of length 2 or int
+        assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
+            isinstance(kernel_size, int)
+        # check if kernel size is int or tuple
+        if isinstance(kernel_size, int):
+            kernel_size = (kernel_size, kernel_size)
+        # Check if stride is a tuple of length 2 or int
+        assert len(stride) == 2 if isinstance(stride, tuple) else \
+            isinstance(stride, int)
+        # check if stride is int or tuple
+        if isinstance(stride, int):
+            stride = (stride, stride)
+        # Check if padding is a tuple of length 2 or int
+        assert len(padding) == 2 if isinstance(padding, tuple) else \
+            isinstance(padding, int)
+        # check if padding is int or tuple
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        # Check if dilation is a tuple of length 2 or int
+        assert len(dilation) == 2 if isinstance(dilation, tuple) else \
+            isinstance(dilation, int)
+        # check if dilation is int or tuple
+        if isinstance(dilation, int):
+            dilation = (dilation, dilation)
         self.in_channels = in_channels
         self.out_channels = out_channels
         # if kernel size/padding is a single int = k, extend it to a (k x k) tuple
-        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (
-            kernel_size, kernel_size)
+        self.kernel_size = kernel_size
         self.padding = padding
-
-        # disregard stride and dilation for now...
         self.stride = stride
         self.dilation = dilation
-
+        self.padding_mode = padding_mode
+        self.groups = groups
         # initialize and register the kernels - we want out_channels kernels
         # each of size in_channels x kernel_h x kernel_w
-        self.kernels = Parameter(
-            torch.rand((self.out_channels, self.in_channels) + self.kernel_size))
-        self.register_parameter("kernels", self.kernels)
+        self.weight = Parameter(torch.rand(self.out_channels, self.in_channels // self.groups,
+                                           self.kernel_size[0], self.kernel_size[1]))
+        self.bias = Parameter(torch.rand(self.out_channels)) if bias else None
+        self.register_parameter("weights", self.weight)
 
     def forward(self, *input_):
         check_inputs(input_)
         self.input_ = input_[0]
-        output = make_gtensor(conv2d(self.input_, self.kernels, self.padding), self,
+        output = make_gtensor(conv2d(self.input_, self.weight.data, self.bias.data, self.padding[0], self.stride[0], self.dilation[0]), self,
                               self.input_)
         return output
 
@@ -107,26 +130,26 @@ class ConvTranspose2d(Module):
                  groups=1, bias=True, dilation=1, padding_mode='zeros') -> None:
         super().__init__('ConvTranspose2d')
         # Check if kernel size is a tuple of length 2 or int
-        assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else isinstance(
-            kernel_size, int)
+        assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
+            isinstance(kernel_size, int)
         # check if kernel size is int or tuple
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         # Check if stride is a tuple of length 2 or int
-        assert len(stride) == 2 if isinstance(stride, tuple) else isinstance(stride,
-                                                                             int)
+        assert len(stride) == 2 if isinstance(stride, tuple) else \
+            isinstance(stride, int)
         # check if stride is int or tuple
         if isinstance(stride, int):
             stride = (stride, stride)
         # Check if padding is a tuple of length 2 or int
-        assert len(padding) == 2 if isinstance(padding, tuple) else isinstance(padding,
-                                                                               int)
+        assert len(padding) == 2 if isinstance(padding, tuple) else \
+            isinstance(padding, int)
         # check if padding is int or tuple
         if isinstance(padding, int):
             padding = (padding, padding)
         # Check if dilation is a tuple of length 2 or int
-        assert len(dilation) == 2 if isinstance(dilation, tuple) else isinstance(
-            dilation, int)
+        assert len(dilation) == 2 if isinstance(dilation, tuple) else \
+            isinstance(dilation, int)
         # check if dilation is int or tuple
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
