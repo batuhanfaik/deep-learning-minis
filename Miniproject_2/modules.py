@@ -109,20 +109,61 @@ class Conv2d(Module):
         self.groups = groups
         # initialize and register the kernels - we want out_channels kernels
         # each of size in_channels x kernel_h x kernel_w
-        self.weight = Parameter(torch.rand(self.out_channels, self.in_channels // self.groups,
-                                           self.kernel_size[0], self.kernel_size[1]))
+        self.weight = Parameter(
+            torch.rand(self.out_channels, self.in_channels // self.groups,
+                       self.kernel_size[0], self.kernel_size[1]))
         self.bias = Parameter(torch.rand(self.out_channels)) if bias else None
         self.register_parameter("weights", self.weight)
 
     def forward(self, *input_):
         check_inputs(input_)
         self.input_ = input_[0]
-        output = make_gtensor(conv2d(self.input_, self.weight.data, self.bias.data, self.padding[0], self.stride[0], self.dilation[0]), self,
-                              self.input_)
+        output = make_gtensor(conv2d(self.input_, self.weight.data, self.bias.data,
+                                     self.padding[0], self.stride[0], self.dilation[0]),
+                              self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
-        pass
+        grad = get_gradient(gradwrtoutput)
+        batch_size, out_channels, out_height, out_width = grad.shape
+        # compute the gradients wrt the output
+        output_grad = grad.clone()
+        # Take batch last
+        for in_dim in range(len(output_grad.shape) - 1):
+            output_grad = output_grad.transpose(in_dim, in_dim + 1)
+        output_grad = output_grad.reshape(out_channels, -1)
+
+        # Get the input
+        tensor_in = self.input_
+        tensor_in = unfold(tensor_in, self.kernel_size, self.dilation, self.padding,
+                           self.stride)
+        for in_dim in range(len(tensor_in.shape) - 1, 0, -1):
+            tensor_in = tensor_in.transpose(in_dim, in_dim - 1)
+        tensor_in = tensor_in.reshape(output_grad.shape[1], -1)
+
+        # Weight and bias gradient
+        weight_grad = output_grad.matmul(tensor_in).reshape(self.weight.shape)
+        self.weight.accumulate_grad(weight_grad)
+
+        if self.bias:
+            bias_grad = grad.sum(dim=(0, 2, 3))
+            self.bias.accumulate_grad(bias_grad)
+
+        # Input gradient
+        in_height = (out_height - 1) * self.stride[0] - 2 * self.padding[0] + \
+                     self.dilation[0] * (self.kernel_size[0] - 1) + 1
+        in_width = (out_width - 1) * self.stride[1] - 2 * self.padding[1] + \
+                    self.dilation[1] * (self.kernel_size[1] - 1) + 1
+        input_grad = self.weight.reshape(out_channels, -1).T.matmul(output_grad)
+        input_grad = input_grad.reshape(self.in_channels * self.kernel_size[0] *
+                                        self.kernel_size[1], out_height * out_width,
+                                        batch_size)
+        for in_dim in range(len(input_grad.shape) - 1, 0, -1):
+            input_grad = input_grad.transpose(in_dim, in_dim - 1)
+        input_grad = fold(input_grad, (in_height, in_width), self.kernel_size,
+                          self.dilation, self.padding, self.stride)
+        input_grad = make_gtensor(input_grad, self, self.input_)
+        return input_grad
 
 
 class ConvTranspose2d(Module):
@@ -210,7 +251,7 @@ class ConvTranspose2d(Module):
 
         input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
         output = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
-
+        output = make_gtensor(output, self, self.input_)
         return output
 
 
