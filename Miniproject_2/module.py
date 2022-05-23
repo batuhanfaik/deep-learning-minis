@@ -19,5 +19,8 @@ class Module(object):
     def parameters(self):
         return [parameter for _, parameter in self._parameters.items() if parameter is not None]
 
+    def named_parameters(self):
+        return [(name, parameter) for name, parameter in self._parameters.items() if parameter is not None]
+
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.forward(*args)

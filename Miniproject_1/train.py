@@ -10,7 +10,7 @@ from utils import psnr
 from model import Model
 
 DATA_PATH = 'miniproject_dataset/'
-OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel_v3.pth')
+OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
 SHUFFLE_DATA = True
 
 
