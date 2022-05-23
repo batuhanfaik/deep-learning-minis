@@ -58,7 +58,7 @@ class TestFunctional(unittest.TestCase):
         out = conv2d(x, kernels, stride=1, dilation=1, padding=0)
         self.assertTrue(torch.isclose(out, gt).all())
 
-    def test_test_conv2d_dilation(self):
+    def test_conv2d_dilation(self):
         x = torch.rand((10, 3, 10, 10))
         kernels = torch.rand((4, 3, 2, 2))
         gt = torch.nn.functional.conv2d(x, kernels, stride=1, dilation=5, padding=0)

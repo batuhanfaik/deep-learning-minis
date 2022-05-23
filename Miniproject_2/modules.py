@@ -7,7 +7,7 @@ from torch.nn.functional import fold, unfold
 from tensor import make_gtensor
 from module import Module
 from parameter import Parameter
-from functional import linear, relu, sigmoid, conv2d, convtranspose2d, max_pool2d
+from functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
 from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 
 
@@ -71,8 +71,9 @@ class Linear(Module):
 
 
 class Conv2d(Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
-                 groups=1, bias=True, dilation=1, padding_mode='zeros') -> None:
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple],
+                 stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
+                 groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1, padding_mode: str = 'zeros') -> None:
         super().__init__("Conv2d")
         # Check if kernel size is a tuple of length 2 or int
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
@@ -119,7 +120,7 @@ class Conv2d(Module):
         check_inputs(input_)
         self.input_ = input_[0]
         output = make_gtensor(conv2d(self.input_, self.weight.data, self.bias.data,
-                                     self.padding[0], self.stride[0], self.dilation[0]),
+                                     padding=self.padding, stride=self.stride, dilation=self.dilation),
                               self, self.input_)
         return output
 
@@ -167,8 +168,10 @@ class Conv2d(Module):
 
 
 class ConvTranspose2d(Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0,
-                 groups=1, bias=True, dilation=1, padding_mode='zeros') -> None:
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple],
+                 stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
+                 groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1,
+                 padding_mode: str = 'zeros') -> None:
         super().__init__('ConvTranspose2d')
         # Check if kernel size is a tuple of length 2 or int
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
@@ -213,9 +216,8 @@ class ConvTranspose2d(Module):
         check_inputs(input[0].shape, length=4)
         tensor_in = input[0]
         self.input_ = tensor_in
-        out = convtranspose2d(tensor_in, self.in_channels, self.out_channels,
-                              self.kernel_size, self.weight, self.bias,
-                              self.stride, self.padding, self.dilation)
+        out = conv_transpose2d(self.input_, weight=self.weight.data, bias=self.bias.data if self.bias is not None else None,
+                              stride=self.stride, padding=self.padding, dilation=self.dilation)
         output = make_gtensor(out, self, self.input_)
         return output
 
@@ -291,7 +293,7 @@ class Sigmoid(Module):
 
 
 class MSELoss(Module):
-    def __init__(self, reduction="mean") -> None:
+    def __init__(self, reduction: str = "mean") -> None:
         super().__init__("MSELoss")
         self.reduction = reduction
         self.input_ = None

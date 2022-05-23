@@ -1,16 +1,16 @@
 import torch
 import time
 
-from modules import ReLU, Sigmoid, ConvTranspose2d, Sequential, MSELoss
+from modules import ReLU, Sigmoid, ConvTranspose2d, Sequential, MSELoss, Conv2d
 from optim import SGD
 
 class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = Sequential(
-            torch.nn.Conv2d(3, 24, 3, stride=2),
+            Conv2d(3, 24, 3, stride=2),
             ReLU(),
-            torch.nn.Conv2d(24, 24, 3, stride=2),
+            Conv2d(24, 24, 3, stride=2),
             ReLU(),
             ConvTranspose2d(24, 24, 3, stride=2),
             ReLU(),
@@ -19,7 +19,7 @@ class Model:
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSELoss()
         self.validate_every = 0
-        self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
+        # self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
 
     def load_pretrained_model(self, ckpt_name: str) -> None:
         print(f'Loading pretrained model from {ckpt_name}')
@@ -66,8 +66,8 @@ class Model:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.6f}')
                     # Save model if validation loss is lower than the best model
-                    if loss < self.best_model['loss']:
-                        self.best_model['model'] = self.model.state_dict()
+                    # if loss < self.best_model['loss']:
+                    #     self.best_model['model'] = self.model.state_dict()
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')

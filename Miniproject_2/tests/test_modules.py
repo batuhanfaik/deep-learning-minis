@@ -80,7 +80,7 @@ class TestModules(unittest.TestCase):
         # compare gradients
         self.assertTrue(torch.equal(our_x_grad, torch_x_grad))
 
-    def test_convtranspose2d(self):
+    def test_conv_transpose2d(self):
         # Create a 1x1x3x3 input tensor
         x = torch.tensor([[[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]]])
         # apply transpose convolution
@@ -98,7 +98,7 @@ class TestModules(unittest.TestCase):
         y = conv(x)
         self.assertTrue(torch.equal(y, torch_y))
 
-    def test_convtranspose2d_backward(self):
+    def test_conv_transpose2d_backward(self):
         x = torch.tensor([[[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]]],
                          requires_grad=True)
         # apply transpose convolution using torch

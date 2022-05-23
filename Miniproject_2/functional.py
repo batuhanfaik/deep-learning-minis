@@ -25,8 +25,13 @@ def linear(x: torch.Tensor, weight: torch.Tensor,
     return output
 
 
-def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, padding: int,
-           stride: int, dilation: int):
+def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] = None,
+           stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
+           dilation: Union[int, Tuple] = 1):
+    stride = (stride, stride) if isinstance(stride, int) else stride
+    padding = (padding, padding) if isinstance(padding, int) else padding
+    dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
+
     # input size is (batch_size x channels x height x width)
     N_in, C_in, H_in, W_in = input_.shape
 
@@ -34,8 +39,8 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, paddi
     C_out, C_ker, H_ker, W_ker = weight.shape
 
     # calculate output shape (based on https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html)
-    H_out = floor((H_in + 2 * padding - dilation * (H_ker - 1) - 1) / stride + 1)
-    W_out = floor((W_in + 2 * padding - dilation * (W_ker - 1) - 1) / stride + 1)
+    H_out = floor((H_in + 2 * padding[0] - dilation[0] * (H_ker - 1) - 1) / stride[0] + 1)
+    W_out = floor((W_in + 2 * padding[1] - dilation[1] * (W_ker - 1) - 1) / stride[1] + 1)
 
     # check whether the number of channels in the input is correct
     if C_in != C_ker: raise ValueError(
@@ -54,22 +59,24 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor, paddi
                 kernels_flattened[:, k].unsqueeze(1))
             output[n][k] = row.reshape(H_out, W_out)
 
-    if bias:
+    if bias is not None:
         output += bias.reshape(1, -1)
 
     return output
 
 
-def convtranspose2d(tensor_in, in_channels, out_channels, kernel_size, weight, bias,
-                    stride, padding, dilation):
-    assert in_channels == tensor_in.shape[1], \
-        "in_channels of layer must be equal to in_channels of input tensor"
-    batch_size, in_channels, in_height, in_width = tensor_in.shape
+def conv_transpose2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] = None,
+                     stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
+                     dilation: Union[int, Tuple] = 1):
+    batch_size, in_channels, in_height, in_width = input_.shape
+    _, out_channels, kernel_h, kernel_w = weight.shape
+    kernel_size = (kernel_h, kernel_w)
+
     # Take batch last
-    for in_dim in range(len(tensor_in.shape) - 1):
-        tensor_in = tensor_in.transpose(in_dim, in_dim + 1)
-    tensor_in = tensor_in.reshape(in_channels, -1)
-    output = weight.reshape(in_channels, -1).T.matmul(tensor_in)
+    for in_dim in range(len(input_.shape) - 1):
+        input_ = input_.transpose(in_dim, in_dim + 1)
+    input_ = input_.reshape(in_channels, -1)
+    output = weight.reshape(in_channels, -1).T.matmul(input_)
     output_t = output.reshape(out_channels * kernel_size[0] * kernel_size[1],
                               in_height * in_width, batch_size)
     # Transpose to batch first
