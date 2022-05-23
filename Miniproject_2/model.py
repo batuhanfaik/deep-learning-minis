@@ -3,6 +3,7 @@ import time
 
 from modules import ReLU, Sigmoid, ConvTranspose2d, Sequential, MSELoss, Conv2d
 from optim import SGD
+from arog import AROG
 
 class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
@@ -10,11 +11,11 @@ class Model:
         self.model = Sequential(
             Conv2d(3, 24, 3, stride=2),
             ReLU(),
-            Conv2d(24, 24, 3, stride=2),
+            Conv2d(24, 48, 3, stride=2),
             ReLU(),
-            ConvTranspose2d(24, 24, 3, stride=2),
+            ConvTranspose2d(48, 16, 3, stride=2),
             ReLU(),
-            ConvTranspose2d(48, 48, 3, stride=2),
+            ConvTranspose2d(16, 3, 4, stride=2),
             Sigmoid())
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSELoss()

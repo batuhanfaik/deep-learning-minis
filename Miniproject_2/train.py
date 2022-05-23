@@ -7,7 +7,7 @@ import os
 from utils import psnr
 from model import Model
 
-DATA_PATH = 'miniproject_dataset/'
+DATA_PATH = '/Users/mismayil/Desktop/EPFL/W2022/DL/deep-learning-minis/Miniproject_2/miniproject_dataset/'
 OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
 SHUFFLE_DATA = True
 

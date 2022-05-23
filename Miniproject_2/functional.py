@@ -58,9 +58,8 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tens
             row = input_unfolded[n].transpose(0, 1).mm(
                 kernels_flattened[:, k].unsqueeze(1))
             output[n][k] = row.reshape(H_out, W_out)
-
-    if bias is not None:
-        output += bias.reshape(1, -1)
+            if bias is not None:
+                output[n][k] += bias[k]
 
     return output
 
@@ -72,9 +71,14 @@ def conv_transpose2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[
     _, out_channels, kernel_h, kernel_w = weight.shape
     kernel_size = (kernel_h, kernel_w)
 
+    stride = (stride, stride) if isinstance(stride, int) else stride
+    padding = (padding, padding) if isinstance(padding, int) else padding
+    dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
+
     # Take batch last
     for in_dim in range(len(input_.shape) - 1):
         input_ = input_.transpose(in_dim, in_dim + 1)
+
     input_ = input_.reshape(in_channels, -1)
     output = weight.reshape(in_channels, -1).T.matmul(input_)
     output_t = output.reshape(out_channels * kernel_size[0] * kernel_size[1],
@@ -88,8 +92,10 @@ def conv_transpose2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[
             kernel_size[1] - 1) + 1
     output = fold(output_t, (out_height, out_width), kernel_size=kernel_size,
                   dilation=dilation, padding=padding, stride=stride)
-    if bias:
-        output += bias.reshape(1, -1)
+
+    if bias is not None:
+        output += bias.reshape(1, -1, 1, 1)
+
     return output
 
 

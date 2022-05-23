@@ -3,7 +3,7 @@ import unittest
 import sys
 sys.path.append("..")
 
-from functional import linear, relu, sigmoid, conv2d, max_pool2d
+from functional import linear, relu, sigmoid, conv2d, max_pool2d, conv_transpose2d
 
 
 class TestFunctional(unittest.TestCase):
@@ -34,8 +34,10 @@ class TestFunctional(unittest.TestCase):
         x = torch.tensor([[[[0., 1., 2., 3.], [4., 5., 6., 7.], [8., 9., 10., 11.],
                             [12., 13., 14., 15.]]]])
         kernels = torch.tensor([[[[0, 1], [2, 3]]]]).float()
-        gt = torch.nn.functional.conv2d(x, kernels, stride=1, dilation=1, padding=0)
-        out = conv2d(x, kernels, stride=1, dilation=1, padding=0)
+        bias = torch.rand(1)
+        gt = torch.nn.functional.conv2d(x, kernels, stride=1, dilation=1, padding=0, bias=bias)
+        out = conv2d(x, kernels, stride=1, dilation=1, padding=0, bias=bias)
+        self.assertTrue(torch.isclose(out, gt).all())
 
     def test_conv2d_single_input(self):
         x = torch.rand((1, 1, 3, 3))
@@ -127,3 +129,11 @@ class TestFunctional(unittest.TestCase):
         torch_out = torch.nn.functional.max_pool2d(x, kernel_size=4, dilation=(1, 2))
         out = max_pool2d(x, kernel_size=4, dilation=(1, 2))
         self.assertTrue(torch.isclose(torch_out, out).all())
+
+    def test_conv2d_transpose(self):
+        x = torch.rand((4, 3, 8, 8))
+        weight = torch.rand((3, 4, 2, 2))
+        bias = torch.rand(4)
+        gt = torch.nn.functional.conv_transpose2d(x, weight, stride=1, dilation=1, padding=0, bias=bias)
+        out = conv_transpose2d(x, weight, stride=1, dilation=1, padding=0, bias=bias)
+        self.assertTrue(torch.isclose(out, gt).all())

@@ -358,13 +358,13 @@ class MaxPool2d(Module):
         N, C, H_in, W_in = self.input_.shape
 
         for ch in range(C):
-            input_folded = unfold(self.input_[:, ch, :, :].unsqueeze(1),
+            input_unfolded = unfold(self.input_[:, ch, :, :].unsqueeze(1),
                                   kernel_size=self.kernel_size,
                                   stride=self.stride, padding=self.padding,
                                   dilation=self.dilation)
-            input_grad = zeros_like(input_folded)
+            input_grad = zeros_like(input_unfolded)
             input_grad = input_grad.scatter(1,
-                                            input_folded.argmax(dim=1, keepdims=True),
+                                            input_unfolded.argmax(dim=1, keepdims=True),
                                             1)
             input_grad = input_grad * output_grad[:, ch, :, :].reshape((N, 1, -1))
             input_grad = fold(input_grad, output_size=(H_in, W_in),
