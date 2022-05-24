@@ -20,8 +20,6 @@ class TestModules(unittest.TestCase):
         out = linear(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        # self.assertTrue(isinstance(out, GTensor))
-        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_linear_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -148,8 +146,6 @@ class TestModules(unittest.TestCase):
         out = relu(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        # self.assertTrue(isinstance(out, GTensor))
-        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_relu_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -170,8 +166,6 @@ class TestModules(unittest.TestCase):
         out = sigmoid(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        # self.assertTrue(isinstance(out, GTensor))
-        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_sigmoid_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -200,8 +194,6 @@ class TestModules(unittest.TestCase):
         out = model(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        # self.assertTrue(isinstance(out , GTensor))
-        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_sequential_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -231,9 +223,6 @@ class TestModules(unittest.TestCase):
         out = loss(x, y)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        # self.assertTrue(isinstance(out, GTensor))
-        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
-        # self.assertTrue(torch.equal(out.get_inputs()[1], y))
 
         torch_loss = torch.nn.MSELoss(reduction="sum")
         loss = MSE(reduction="sum")

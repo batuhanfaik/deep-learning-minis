@@ -85,9 +85,13 @@ class Module(object):
     def load_state_dict(self, state):
         for name, parameter in state.items():
             self.load_parameter(name, parameter)
+        
+        return self
     
     def to(self, device):
         parameters = self.parameters()
 
         for parameter in parameters:
             parameter.to(device)
+        
+        return self
