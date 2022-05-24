@@ -89,9 +89,12 @@ class Module(object):
         return self
     
     def to(self, device):
-        parameters = self.parameters()
-
-        for parameter in parameters:
-            parameter.to(device)
+        if len(self.modules) > 0:
+            for module in self.modules:
+                module.to(device)
+            return self
         
+        for name, parameter in self.named_parameters():
+            setattr(self, name, parameter.to(device))
+
         return self
