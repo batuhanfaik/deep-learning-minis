@@ -32,34 +32,23 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tens
     padding = (padding, padding) if isinstance(padding, int) else padding
     dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
 
-    # input size is (batch_size x channels x height x width)
     N_in, C_in, H_in, W_in = input_.shape
-
-    # kernels are of size (out_channels, in_channels, kernel_height, kernel_width)
     C_out, C_ker, H_ker, W_ker = weight.shape
 
-    # calculate output shape (based on https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html)
     H_out = floor((H_in + 2 * padding[0] - dilation[0] * (H_ker - 1) - 1) / stride[0] + 1)
     W_out = floor((W_in + 2 * padding[1] - dilation[1] * (W_ker - 1) - 1) / stride[1] + 1)
 
-    # check whether the number of channels in the input is correct
     if C_in != C_ker: raise ValueError(
         "Numbers of channels in the input and kernel are different.")
-    # compute convolutions
+
     input_unfolded = unfold(input_, kernel_size=(H_ker, W_ker), padding=padding,
                             stride=stride, dilation=dilation)
     kernels_flattened = weight.reshape(C_out, C_ker * H_ker * W_ker).T
+    output = input_unfolded.transpose(1, 2).matmul(kernels_flattened).transpose(1, 2)
+    output = output.reshape(N_in, C_out, H_out, W_out)
 
-    # print("Shapes: ", input_unfolded.shape, kernels_flattened.shape)
-    output = torch.empty(N_in, C_out, H_out, W_out)
-
-    for n in range(N_in):
-        for k in range(C_out):
-            row = input_unfolded[n].transpose(0, 1).mm(
-                kernels_flattened[:, k].unsqueeze(1))
-            output[n][k] = row.reshape(H_out, W_out)
-            if bias is not None:
-                output[n][k] += bias[k]
+    if bias is not None:
+        output += bias.reshape(1, -1, 1, 1)
 
     return output
 
