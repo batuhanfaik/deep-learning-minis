@@ -1,7 +1,10 @@
 import torch
 from functools import partial
 
-from utils import get_gradient
+try:
+    from .utils import get_gradient
+except:
+    from utils import get_gradient
 
 ATTR_INPUTS = "inputs"
 ATTR_OPERATION = "operation"

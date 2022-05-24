@@ -1,6 +1,9 @@
 from typing import List
 
-from parameter import Parameter, zero_grad
+try:
+    from parameter import Parameter, zero_grad
+except:
+    from .parameter import Parameter, zero_grad
 
 class Optimizer(object):
     def __init__(self, parameters: List[Parameter]) -> None:

@@ -1,7 +1,10 @@
 from functools import reduce
-
 import torch
-from utils import zeros
+
+try:
+    from .utils import zeros
+except:
+    from utils import zeros
 
 
 def Parameter(data: torch.Tensor, requires_grad: bool = True):

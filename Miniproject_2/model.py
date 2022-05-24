@@ -2,8 +2,12 @@ import torch
 import time
 from pathlib import Path
 
-from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
-from optim import SGD
+try:
+    from .modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
+    from .optim import SGD
+except:
+    from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
+    from optim import SGD
 
 class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:

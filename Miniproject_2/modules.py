@@ -6,11 +6,18 @@ import math
 import torch
 from torch.nn.functional import fold, unfold
 
-from tensor import autograd_tensor
-from module import Module
-from parameter import Parameter, accumulate_grad
-from functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
-from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
+try:
+    from .tensor import autograd_tensor
+    from .module import Module
+    from .parameter import Parameter, accumulate_grad
+    from .functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
+    from .utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
+except:
+    from tensor import autograd_tensor
+    from module import Module
+    from parameter import Parameter, accumulate_grad
+    from functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
+    from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 
 
 class Sequential(Module):

@@ -1,6 +1,10 @@
 from typing import Optional, Any
 
-from parameter import Parameter, zero_grad
+try:
+    from .parameter import Parameter, zero_grad
+except:
+    from parameter import Parameter, zero_grad
+
 
 class Module(object):
     def __init__(self, name: Optional[str] = None) -> None:
