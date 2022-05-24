@@ -1,6 +1,6 @@
 from typing import List
 
-from parameter import Parameter
+from parameter import Parameter, zero_grad
 
 class Optimizer(object):
     def __init__(self, parameters: List[Parameter]) -> None:
@@ -20,7 +20,7 @@ class SGD(Optimizer):
     
     def zero_grad(self):
         for parameter in self.parameters:
-            parameter.zero_grad()
+            zero_grad(parameter)
         
     def step(self):
         for parameter in self.parameters:

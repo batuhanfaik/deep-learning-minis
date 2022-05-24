@@ -5,6 +5,7 @@ sys.path.append("..")
 
 from optim import SGD
 from modules import Linear, ReLU, Sequential, MSE, Sigmoid
+from parameter import Parameter
 
 class TestOptim(unittest.TestCase):
     def test_sgd(self):
@@ -15,10 +16,10 @@ class TestOptim(unittest.TestCase):
         torch_model = torch.nn.Sequential(torch_linear1, torch.nn.Sigmoid(), torch_linear2, torch.nn.ReLU())
         linear1 = Linear(2, 4)
         linear2 = Linear(4, 2)
-        linear1.weight.data = torch_linear1.weight.data
-        linear1.bias.data = torch_linear1.bias.data
-        linear2.weight.data = torch_linear2.weight.data
-        linear2.bias.data = torch_linear2.bias.data
+        linear1.weight = Parameter(torch_linear1.weight.data)
+        linear1.bias = Parameter(torch_linear1.bias.data)
+        linear2.weight = Parameter(torch_linear2.weight.data)
+        linear2.bias = Parameter(torch_linear2.bias.data)
         model = Sequential(linear1, Sigmoid(), linear2, ReLU())
 
         optimizer = SGD(model.parameters(), lr=0.001)

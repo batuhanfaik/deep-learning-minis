@@ -6,29 +6,29 @@ import sys
 sys.path.append("..")
 
 from modules import Linear, Conv2d, TransposeConv2d, ReLU, Sigmoid, Sequential, MSE, MaxPool2d
-from tensor import GTensor
-
+# from tensor import GTensor
+from parameter import Parameter
 
 class TestModules(unittest.TestCase):
     def test_linear(self):
         x = torch.rand((3, 2), requires_grad=True)
         torch_linear = torch.nn.Linear(2, 4)
         linear = Linear(2, 4)
-        linear.weight.data = torch_linear.weight.data
-        linear.bias.data = torch_linear.bias.data
+        linear.weight = Parameter(torch_linear.weight.data)
+        linear.bias = Parameter(torch_linear.bias.data)
         torch_out = torch_linear(x)
         out = linear(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        self.assertTrue(isinstance(out, GTensor))
-        self.assertTrue(torch.equal(out.get_inputs()[0], x))
+        # self.assertTrue(isinstance(out, GTensor))
+        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_linear_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
         torch_linear = torch.nn.Linear(2, 4)
         linear = Linear(2, 4)
-        linear.weight.data = torch_linear.weight.data
-        linear.bias.data = torch_linear.bias.data
+        linear.weight = Parameter(torch_linear.weight.data)
+        linear.bias = Parameter(torch_linear.bias.data)
         torch_out = torch_linear(x)
         out = linear(x)
         torch.autograd.backward(torch_out, torch.ones_like(torch_out))
@@ -51,8 +51,8 @@ class TestModules(unittest.TestCase):
         torch_y = torch_conv(x)
         # apply convolution with our implementation
         conv = Conv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
-        conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
-        conv.bias.data = torch.tensor([5.0])
+        conv.weight = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        conv.bias = torch.tensor([5.0])
         # apply kernel
         y = conv(x)
         self.assertTrue(torch.equal(y, torch_y))
@@ -72,8 +72,8 @@ class TestModules(unittest.TestCase):
         x.grad.zero_()
         # apply convolution with our implementation
         conv = Conv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
-        conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
-        conv.bias.data = torch.tensor([5.0])
+        conv.weight = Parameter(torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]]))
+        conv.bias = Parameter(torch.tensor([5.0]))
         y = conv(x)
         # our backwards
         our_x_grad = conv.backward(torch.ones_like(y))
@@ -92,8 +92,8 @@ class TestModules(unittest.TestCase):
         torch_y = torch_conv(x)
         # apply transpose convolution with our implementation
         conv = TransposeConv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
-        conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
-        conv.bias.data = torch.tensor([5.0])
+        conv.weight = Parameter(torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]]))
+        conv.bias = Parameter(torch.tensor([5.0]))
         # apply kernel
         y = conv(x)
         self.assertTrue(torch.equal(y, torch_y))
@@ -114,8 +114,8 @@ class TestModules(unittest.TestCase):
         x.grad.zero_()
         # apply transpose convolution with our implementation
         conv = TransposeConv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
-        conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
-        conv.bias.data = torch.tensor([5.0])
+        conv.weight = Parameter(torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]]))
+        conv.bias = Parameter(torch.tensor([5.0]))
         y = conv(x)
         # our backwards
         our_x_grad = conv.backward(torch.ones_like(y))
@@ -130,8 +130,8 @@ class TestModules(unittest.TestCase):
         out = relu(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        self.assertTrue(isinstance(out, GTensor))
-        self.assertTrue(torch.equal(out.get_inputs()[0], x))
+        # self.assertTrue(isinstance(out, GTensor))
+        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_relu_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -152,8 +152,8 @@ class TestModules(unittest.TestCase):
         out = sigmoid(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        self.assertTrue(isinstance(out, GTensor))
-        self.assertTrue(torch.equal(out.get_inputs()[0], x))
+        # self.assertTrue(isinstance(out, GTensor))
+        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_sigmoid_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -173,17 +173,17 @@ class TestModules(unittest.TestCase):
         torch_model = torch.nn.Sequential(torch_linear1, torch.nn.Sigmoid(), torch_linear2, torch.nn.ReLU())
         linear1 = Linear(2, 4)
         linear2 = Linear(4, 1)
-        linear1.weight.data = torch_linear1.weight.data
-        linear1.bias.data = torch_linear1.bias.data
-        linear2.weight.data = torch_linear2.weight.data
-        linear2.bias.data = torch_linear2.bias.data
+        linear1.weight = Parameter(torch_linear1.weight.data)
+        linear1.bias = Parameter(torch_linear1.bias.data)
+        linear2.weight = Parameter(torch_linear2.weight.data)
+        linear2.bias = Parameter(torch_linear2.bias.data)
         model = Sequential(linear1, Sigmoid(), linear2, ReLU())
         torch_out = torch_model(x)
         out = model(x)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        self.assertTrue(isinstance(out, GTensor))
-        self.assertTrue(torch.equal(out.get_inputs()[0], x))
+        # self.assertTrue(isinstance(out , GTensor))
+        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
 
     def test_sequential_backward(self):
         x = torch.rand((3, 2), requires_grad=True)
@@ -192,10 +192,10 @@ class TestModules(unittest.TestCase):
         torch_model = torch.nn.Sequential(torch_linear1, torch.nn.Sigmoid(), torch_linear2, torch.nn.ReLU())
         linear1 = Linear(2, 4)
         linear2 = Linear(4, 1)
-        linear1.weight.data = torch_linear1.weight.data
-        linear1.bias.data = torch_linear1.bias.data
-        linear2.weight.data = torch_linear2.weight.data
-        linear2.bias.data = torch_linear2.bias.data
+        linear1.weight = Parameter(torch_linear1.weight.data)
+        linear1.bias = Parameter(torch_linear1.bias.data)
+        linear2.weight = Parameter(torch_linear2.weight.data)
+        linear2.bias = Parameter(torch_linear2.bias.data)
         model = Sequential(linear1, Sigmoid(), linear2, ReLU())
         torch_out = torch_model(x)
         out = model(x)
@@ -213,9 +213,9 @@ class TestModules(unittest.TestCase):
         out = loss(x, y)
         self.assertTrue(torch.allclose(torch_out, out))
         self.assertEqual(torch_out.shape, out.shape)
-        self.assertTrue(isinstance(out, GTensor))
-        self.assertTrue(torch.equal(out.get_inputs()[0], x))
-        self.assertTrue(torch.equal(out.get_inputs()[1], y))
+        # self.assertTrue(isinstance(out, GTensor))
+        # self.assertTrue(torch.equal(out.get_inputs()[0], x))
+        # self.assertTrue(torch.equal(out.get_inputs()[1], y))
 
         torch_loss = torch.nn.MSELoss(reduction="sum")
         loss = MSE(reduction="sum")

@@ -1,7 +1,7 @@
 from typing import Union
 from pathlib import Path
 
-from utils import GORA
+from .utils import GORA
 
 import torch
 import time

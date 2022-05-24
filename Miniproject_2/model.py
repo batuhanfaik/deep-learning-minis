@@ -1,9 +1,9 @@
 import torch
 import time
+from pathlib import Path
 
 from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
 from optim import SGD
-from arog import AROG
 
 class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
@@ -20,9 +20,10 @@ class Model:
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
         self.validate_every = 0
+        self.batch_size = 100
         # self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
 
-    def load_pretrained_model(self, ckpt_name: str) -> None:
+    def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 

@@ -1,6 +1,6 @@
 from typing import Optional, Any
 
-from parameter import Parameter
+from parameter import Parameter, zero_grad
 
 class Module(object):
     def __init__(self, name: Optional[str] = None) -> None:
@@ -34,4 +34,4 @@ class Module(object):
     
     def zero_grad(self):
         for parameter in self._parameters:
-            parameter.zero_grad()
+            zero_grad(parameter)

@@ -6,9 +6,9 @@ import math
 import torch
 from torch.nn.functional import fold, unfold
 
-from tensor import make_gtensor
+from tensor import autograd_tensor
 from module import Module
-from parameter import Parameter
+from parameter import Parameter, accumulate_grad
 from functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
 from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 
@@ -29,7 +29,7 @@ class Sequential(Module):
         for module in self.modules:
             output = module.forward(output)
 
-        return make_gtensor(output, self, input[0])
+        return autograd_tensor(output, self, input[0])
 
     def backward(self, *gradwrtoutput):
         output = get_gradient(gradwrtoutput)
@@ -55,7 +55,7 @@ class Linear(Module):
     def forward(self, *input):
         check_inputs(input)
         self.input_ = input[0]
-        output = make_gtensor(linear(self.input_, self.weight.data, self.bias.data),
+        output = autograd_tensor(linear(self.input_, self.weight, self.bias),
                               self, self.input_)
         return output
 
@@ -63,11 +63,11 @@ class Linear(Module):
         output_grad = get_gradient(gradwrtoutput)
         weight_grad = output_grad.T.mm(self.input_)
         bias_grad = output_grad.T.mm(ones((self.input_.shape[0], 1))).squeeze()
-        input_grad = output_grad.mm(self.weight.data)
-        self.weight.accumulate_grad(weight_grad)
+        input_grad = output_grad.mm(self.weight)
+        accumulate_grad(self.weight, weight_grad)
 
         if self.bias is not None:
-            self.bias.accumulate_grad(bias_grad)
+            accumulate_grad(self.bias, bias_grad)
 
         return input_grad
 
@@ -127,7 +127,7 @@ class Conv2d(Module):
     def forward(self, *input_):
         check_inputs(input_)
         self.input_ = input_[0]
-        output = make_gtensor(conv2d(self.input_, self.weight.data, self.bias.data,
+        output = autograd_tensor(conv2d(self.input_, self.weight, self.bias,
                                      padding=self.padding, stride=self.stride, dilation=self.dilation),
                               self, self.input_)
         return output
@@ -152,11 +152,11 @@ class Conv2d(Module):
 
         # Weight and bias gradient
         weight_grad = output_grad.matmul(tensor_in).reshape(self.weight.shape)
-        self.weight.accumulate_grad(weight_grad)
+        accumulate_grad(self.weight, weight_grad)
 
-        if self.bias:
+        if self.bias is not None:
             bias_grad = grad.sum(dim=(0, 2, 3))
-            self.bias.accumulate_grad(bias_grad)
+            accumulate_grad(self.bias, bias_grad)
 
         # Input gradient
         in_height = (out_height - 1) * self.stride[0] - 2 * self.padding[0] + \
@@ -171,7 +171,7 @@ class Conv2d(Module):
             input_grad = input_grad.transpose(in_dim, in_dim - 1)
         input_grad = fold(input_grad, (in_height, in_width), self.kernel_size,
                           self.dilation, self.padding, self.stride)
-        input_grad = make_gtensor(input_grad, self, self.input_)
+        input_grad = autograd_tensor(input_grad, self, self.input_)
         return input_grad
 
 
@@ -231,9 +231,9 @@ class TransposeConv2d(Module):
         check_inputs(input[0].shape, length=4)
         tensor_in = input[0]
         self.input_ = tensor_in
-        out = conv_transpose2d(self.input_, weight=self.weight.data, bias=self.bias.data if self.bias is not None else None,
+        out = conv_transpose2d(self.input_, weight=self.weight, bias=self.bias if self.bias is not None else None,
                               stride=self.stride, padding=self.padding, dilation=self.dilation)
-        output = make_gtensor(out, self, self.input_)
+        output = autograd_tensor(out, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -254,11 +254,11 @@ class TransposeConv2d(Module):
         tensor_in = tensor_in.reshape(self.in_channels, -1)
         weight_grad = tensor_in.matmul(
             weight_grad.reshape(tensor_in.shape[1], -1)).reshape(self.weight.shape)
-        self.weight.accumulate_grad(weight_grad)
+        accumulate_grad(self.weight, weight_grad)
 
-        if self.bias:
+        if self.bias is not None:
             bias_grad = grad.sum(dim=(0, 2, 3))
-            self.bias.accumulate_grad(bias_grad)
+            accumulate_grad(self.bias, bias_grad)
 
         in_height = (out_height + 2 * self.padding[0] - self.dilation[0] *
                      (self.kernel_size[0] - 1) - 1) // self.stride[0] + 1
@@ -268,7 +268,7 @@ class TransposeConv2d(Module):
 
         input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
         output = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
-        output = make_gtensor(output, self, self.input_)
+        output = autograd_tensor(output, self, self.input_)
         return output
 
 
@@ -280,7 +280,7 @@ class ReLU(Module):
     def forward(self, *input):
         check_inputs(input)
         self.input_ = input[0]
-        output = make_gtensor(relu(self.input_), self, self.input_)
+        output = autograd_tensor(relu(self.input_), self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -297,7 +297,7 @@ class Sigmoid(Module):
     def forward(self, *input):
         check_inputs(input)
         self.input_ = input[0]
-        output = make_gtensor(sigmoid(self.input_), self, self.input_)
+        output = autograd_tensor(sigmoid(self.input_), self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -330,7 +330,7 @@ class MSE(Module):
         elif self.reduction == "mean":
             loss = error.mean()
 
-        return make_gtensor(loss, self, [self.input_, self.target])
+        return autograd_tensor(loss, self, [self.input_, self.target])
 
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
@@ -364,7 +364,7 @@ class MaxPool2d(Module):
         pool_output = max_pool2d(self.input_, kernel_size=self.kernel_size,
                                  stride=self.stride, padding=self.padding,
                                  dilation=self.dilation)
-        output = make_gtensor(pool_output, self, self.input_)
+        output = autograd_tensor(pool_output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):

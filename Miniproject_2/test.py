@@ -1,22 +1,13 @@
-
 import torch
+from modules import Linear
+from parameter import Parameter
 
-from modules import MaxPool2d
-
-from torch import autograd
-
-from modules import MSE
-
-x = torch.rand((3, 4))
-y = torch.rand((3, 4))
-torch_loss = torch.nn.MSELoss()
-loss = MSE()
-torch_out = torch_loss(x, y)
-out = loss(x, y)
-print(torch_out)
-print(out)
-# self.assertTrue(torch.allclose(torch_out, out))
-# self.assertEqual(torch_out.shape, out.shape)
-# self.assertTrue(isinstance(out, GTensor))
-# self.assertTrue(torch.equal(out.get_inputs()[0], x))
-# self.assertTrue(torch.equal(out.get_inputs()[1], y))
+x = torch.rand((3, 2), requires_grad=True)
+torch_linear = torch.nn.Linear(2, 4)
+linear = Linear(2, 4)
+linear.weight = Parameter(torch_linear.weight)
+linear.bias = Parameter(torch_linear.bias)
+torch_out = torch_linear(x)
+out = linear(x)
+torch.autograd.backward(torch_out, torch.ones_like(torch_out))
+grad = linear.backward(torch.ones_like(out))

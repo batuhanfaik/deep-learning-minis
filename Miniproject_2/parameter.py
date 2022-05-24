@@ -1,25 +1,20 @@
-from typing import Optional
 from functools import reduce
 
 import torch
+from utils import zeros
 
 
-class Parameter:
-    def __init__(self, data: Optional[torch.Tensor] = None, requires_grad: bool = True):
-        if data is None:
-            data = torch.empty(0)
-        self.data = data
-        self.requires_grad = requires_grad
-        self.grad = torch.tensor(0)
-        self.shape = self.data.shape
+def Parameter(data: torch.Tensor, requires_grad: bool = True):
+    data.requires_grad = requires_grad
+    data.grad = zeros(data.shape)
+    return data
 
-    def accumulate_grad(self, *grads: torch.Tensor) -> torch.Tensor:
-        if self.requires_grad:
-            self.grad = self.grad + reduce(lambda a, b: a + b, grads)
-        return self.grad
+def accumulate_grad(tensor, *grads) -> torch.Tensor:
+    if tensor.requires_grad:
+        tensor.grad = tensor.grad + reduce(lambda a, b: a + b, grads)
+    return tensor.grad
 
-    def zero_grad(self) -> None:
-        self.grad = torch.tensor(0)
+def zero_grad(tensor) -> None:
+    tensor.grad.zero_()
 
-    def reshape(self, *args) -> torch.Tensor:
-        return self.data.reshape(*args)
+

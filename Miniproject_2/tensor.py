@@ -1,50 +1,45 @@
 import torch
+from functools import partial
+
 from utils import get_gradient
 
 ATTR_INPUTS = "inputs"
 ATTR_OPERATION = "operation"
-
-class GTensor(torch.Tensor):
-    @staticmethod
-    def __new__(cls, x, metadata=None, *args, **kwargs):
-        return super().__new__(cls, x, *args, **kwargs)
-    
-    def __init__(self, x, metadata=None):
-        super().__init__()
-        self.metadata = metadata or {ATTR_INPUTS: [], ATTR_OPERATION: None}
-
-    def get_inputs(self):
-        if self.metadata:
-            return self.metadata.get(ATTR_INPUTS, [])
-        return []
-    
-    def get_operation(self):
-        if self.metadata:
-            return self.metadata.get(ATTR_OPERATION)
-        return None
-    
-    def backward(self, *gradients, **kwargs):
-        gradient = get_gradient(gradients)
-        operation = self.get_operation()
-
-        if operation is not None:
-            gradient = operation.backward(gradient)
- 
-        inputs = self.get_inputs()
-
-        for input in inputs:
-            if isinstance(input, GTensor):
-                input.backward(gradient)
         
+def get_inputs(tensor):
+    if tensor.metadata:
+        return tensor.metadata.get(ATTR_INPUTS, [])
+    return []
 
-def make_gtensor(output, operation=None, inputs=None):
+def get_operation(tensor):
+    if tensor.metadata:
+        return tensor.metadata.get(ATTR_OPERATION)
+    return None
+
+def backward(tensor, *gradients, **kwargs):
+    gradient = get_gradient(gradients)
+    operation = get_operation(tensor)
+
+    if operation is not None:
+        gradient = operation.backward(gradient)
+
+    inputs = get_inputs(tensor)
+
+    for input_ in inputs:
+        if input_.requires_grad:
+            input_.backward(gradient)
+            
+def autograd_tensor(tensor, operation=None, inputs=None):
     if inputs is None:
         inputs = []
     
     if isinstance(inputs, torch.Tensor):
         inputs = [inputs]
+    
+    if not tensor.requires_grad:
+        tensor.requires_grad = True
 
-    metadata = {ATTR_OPERATION: operation, ATTR_INPUTS: inputs}
-    return GTensor(output, metadata)
+    tensor.metadata = {ATTR_OPERATION: operation, ATTR_INPUTS: inputs}
+    tensor.backward = partial(backward, tensor)
 
-        
+    return tensor
