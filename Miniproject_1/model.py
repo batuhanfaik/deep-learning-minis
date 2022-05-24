@@ -1,7 +1,10 @@
 from typing import Union
 from pathlib import Path
 
-from .utils import GORA
+try:
+    from .utils import GORA
+except:
+    from utils import GORA
 
 import torch
 import time
@@ -113,7 +116,11 @@ class Model:
                 batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
                     self.device)
                 # Forward pass
-                output = self.model(batch_input)
+                output = self.model(batch_input) * 255.0
+                # Cutoff values to [0, 255]
+                output = torch.clamp(output, 0, 255)
+                # Convert to unsigned int tensor
+                output = output.to(torch.uint8)
                 # Save output
                 denoised_output[batch_idx:batch_idx + self.batch_size] = output
         return denoised_output
