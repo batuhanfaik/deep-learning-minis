@@ -21,7 +21,6 @@ class Module(object):
     def register_module(self, module):
         self._submodules.append(module)
 
-    @property
     def modules(self):
         return self._submodules
 
@@ -38,10 +37,10 @@ class Module(object):
         return [parameter for _, parameter in self.named_parameters(recurse=recurse)]
 
     def named_parameters(self, prefix: str = "", recurse: bool = True):
-        if recurse and len(self.modules) > 0:
+        if recurse and len(self.modules()) > 0:
             named_parameters = []
 
-            for i, module in enumerate(self.modules):
+            for i, module in enumerate(self.modules()):
                 named_parameters.extend(module.named_parameters(prefix=f"{prefix}{module.name}{MODULE_DELIMITER}{i}{PARAMETER_DELIMITER}",
                                                                 recurse=recurse))
             
@@ -75,7 +74,7 @@ class Module(object):
         
         module_part = name_parts[0]
         module_name, module_num = module_part.split(MODULE_DELIMITER)
-        module = self.modules[int(module_num)]
+        module = self.modules()[int(module_num)]
 
         if module.name != module_name:
             raise ValueError(f"Invalid state dict. {module_name} not found in submodules")
@@ -89,8 +88,8 @@ class Module(object):
         return self
     
     def to(self, device):
-        if len(self.modules) > 0:
-            for module in self.modules:
+        if len(self.modules()) > 0:
+            for module in self.modules():
                 module.to(device)
             return self
         

@@ -30,7 +30,7 @@ class Sequential(Module):
         check_inputs(input)
         output = input[0]
 
-        for module in self.modules:
+        for module in self.modules():
             output = module.forward(output)
 
         return autograd_tensor(output, self, input[0])
@@ -38,7 +38,7 @@ class Sequential(Module):
     def backward(self, *gradwrtoutput):
         output = get_gradient(gradwrtoutput)
 
-        for module in self.modules[::-1]:
+        for module in self.modules()[::-1]:
             output = module.backward(output)
 
         return output
