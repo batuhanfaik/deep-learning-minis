@@ -5,7 +5,7 @@ import sys
 
 sys.path.append("..")
 
-from modules import Linear, Conv2d, TransposeConv2d, ReLU, Sigmoid, Sequential, MSE, MaxPool2d
+from modules import Linear, Conv2d, TransposeConv2d, ReLU, Sigmoid, Sequential, MSE, MaxPool2d, Upsampling
 # from tensor import GTensor
 from parameter import Parameter
 
@@ -92,6 +92,24 @@ class TestModules(unittest.TestCase):
         torch_y = torch_conv(x)
         # apply transpose convolution with our implementation
         conv = TransposeConv2d(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
+        conv.weight = Parameter(torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]]))
+        conv.bias = Parameter(torch.tensor([5.0]))
+        # apply kernel
+        y = conv(x)
+        self.assertTrue(torch.equal(y, torch_y))
+
+    def test_upsampling(self):
+        # Create a 1x1x3x3 input tensor
+        x = torch.tensor([[[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]]])
+        # apply transpose convolution
+        torch_conv = torch.nn.ConvTranspose2d(1, 1, kernel_size=2, stride=1, padding=0,
+                                              bias=True)
+        torch_conv.weight.data = torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]])
+        torch_conv.bias.data = torch.tensor([5.0])
+        # apply kernel
+        torch_y = torch_conv(x)
+        # apply transpose convolution with our implementation
+        conv = Upsampling(1, 1, kernel_size=2, stride=1, padding=0, bias=True)
         conv.weight = Parameter(torch.tensor([[[[0.0, 1.0], [2.0, 3.0]]]]))
         conv.bias = Parameter(torch.tensor([5.0]))
         # apply kernel

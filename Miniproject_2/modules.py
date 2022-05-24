@@ -393,3 +393,6 @@ class MaxPool2d(Module):
             input_grads.append(input_grad)
 
         return torch.cat(input_grads, dim=1)
+
+
+Upsampling = TransposeConv2d
