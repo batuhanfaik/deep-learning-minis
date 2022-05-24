@@ -1,5 +1,5 @@
 import torch
-from functools import partial
+from functools import partial, reduce
 
 try:
     from .utils import get_gradient
@@ -46,3 +46,11 @@ def autograd_tensor(tensor, operation=None, inputs=None):
     tensor.backward = partial(backward, tensor)
 
     return tensor
+
+def accumulate_grad(tensor, *grads) -> torch.Tensor:
+    if tensor.requires_grad:
+        tensor.grad = tensor.grad + reduce(lambda a, b: a + b, grads)
+    return tensor.grad
+
+def zero_grad(tensor) -> None:
+    tensor.grad.zero_()

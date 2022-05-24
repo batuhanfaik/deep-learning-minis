@@ -1,9 +1,12 @@
 from typing import List
 
 try:
-    from parameter import Parameter, zero_grad
+    from .parameter import Parameter
+    from .autograd import zero_grad
 except:
-    from .parameter import Parameter, zero_grad
+    from parameter import Parameter
+    from autograd import zero_grad
+
 
 class Optimizer(object):
     def __init__(self, parameters: List[Parameter]) -> None:

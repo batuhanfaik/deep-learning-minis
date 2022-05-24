@@ -7,15 +7,15 @@ import torch
 from torch.nn.functional import fold, unfold
 
 try:
-    from .tensor import autograd_tensor
+    from .autograd import autograd_tensor, accumulate_grad
     from .module import Module
-    from .parameter import Parameter, accumulate_grad
+    from .parameter import Parameter
     from .functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
     from .utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 except:
-    from tensor import autograd_tensor
+    from autograd import autograd_tensor, accumulate_grad
     from module import Module
-    from parameter import Parameter, accumulate_grad
+    from parameter import Parameter
     from functional import linear, relu, sigmoid, conv2d, conv_transpose2d, max_pool2d
     from utils import check_inputs, get_gradient, zeros, ones, zeros_like, ones_like
 
@@ -23,11 +23,8 @@ except:
 class Sequential(Module):
     def __init__(self, *modules) -> None:
         super().__init__('Sequential')
-        self.modules = modules
-
-        for i, module in enumerate(modules):
-            for name, parameter in module.named_parameters():
-                self.register_parameter(f"{module.name}{i}.{name}", parameter)
+        for module in modules:
+            self.register_module(module)
 
     def forward(self, *input):
         check_inputs(input)

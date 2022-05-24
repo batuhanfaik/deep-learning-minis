@@ -20,12 +20,12 @@ class Model:
             TransposeConv2d(48, 16, 3, stride=2),
             ReLU(),
             TransposeConv2d(16, 3, 4, stride=2),
-            Sigmoid())
+            Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
         self.validate_every = 0
         self.batch_size = 100
-        # self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
+        self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
 
     def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
@@ -72,8 +72,8 @@ class Model:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.6f}')
                     # Save model if validation loss is lower than the best model
-                    # if loss < self.best_model['loss']:
-                    #     self.best_model['model'] = self.model.state_dict()
+                    if loss < self.best_model['loss']:
+                        self.best_model['model'] = self.model.state_dict()
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')

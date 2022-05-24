@@ -3,7 +3,8 @@ import unittest
 import sys
 sys.path.append("..")
 
-from parameter import Parameter, accumulate_grad, zero_grad
+from parameter import Parameter
+from autograd import accumulate_grad, zero_grad
 
 
 class TestParameter(unittest.TestCase):
