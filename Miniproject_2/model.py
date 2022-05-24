@@ -9,6 +9,7 @@ except:
     from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
     from optim import SGD
 
+
 class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

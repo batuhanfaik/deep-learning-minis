@@ -12,6 +12,17 @@ import time
 
 class Model:
     def __init__(self) -> None:
+        """
+        Initialize model
+            device: Device to use
+            model: Model to use
+            optimizer: Optimizer to use
+            scheduler: Scheduler to use
+            loss_fn: Loss function to use
+            batch_size: Batch size to use
+            validate_every: Validation frequency
+            best_model: Dictionary to save best model
+        """
         # Initialize model
         self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
         self.model = GORA().to(self.device)
@@ -26,11 +37,23 @@ class Model:
         self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
 
     def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
+        """
+        Load pretrained model
+        ckpt_name: Path to checkpoint
+        return: None
+        """
         print(f'Loading pretrained model from {ckpt_name}')
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor,
               num_epochs: int = 25) -> None:
+        """
+        Train model
+        train_input: Input data
+        train_target: Target data
+        num_epochs: Number of epochs to train
+        return: None
+        """
         print('Training...')
         # Set model in training mode
         self.model.train()
@@ -80,6 +103,12 @@ class Model:
         print(f'Training time: {end_time - start_time:.2f}s')
 
     def validate(self, test_input: torch.Tensor, test_target: torch.Tensor) -> float:
+        """
+        Validate model
+        test_input: Input data
+        test_target: Target data
+        return: Validation loss
+        """
         print('Validating...')
         # Set model in evaluation mode
         self.model.eval()
@@ -104,6 +133,11 @@ class Model:
             return running_loss / (len(test_input) / self.batch_size)
 
     def predict(self, test_input: torch.Tensor) -> torch.Tensor:
+        """
+        Predict using model
+        test_input: Input data
+        return: Predicted data
+        """
         # Set model in evaluation mode
         self.model.eval()
         # If input is ByteTensor, convert to FloatTensor
@@ -126,6 +160,11 @@ class Model:
         return denoised_output
 
     def __get_optimizer(self, lr: float = 1e-3) -> torch.optim:
+        """
+        Get optimizer
+        lr: Learning rate
+        return: Optimizer
+        """
         # Parameters are from paper 'Noise2Noise: Learning Image Restoration without
         # Clean Data' https://arxiv.org/abs/1803.04189
         return torch.optim.Adam(
@@ -137,12 +176,23 @@ class Model:
 
     def __get_scheduler(self, mode: str = 'min',
                         factor: float = 0.1) -> torch.optim.lr_scheduler:
+        """
+        Get scheduler
+        mode: Mode of scheduler
+        factor: Factor of scheduler
+        return: Scheduler
+        """
         return torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode=mode,
                                                           factor=factor, patience=10,
                                                           verbose=False)
 
     def __get_loss_fn(self, loss_fn: Union[None, str] = None) \
             -> torch.nn.modules.loss:
+        """
+        Get loss function
+        loss_fn: Loss function
+        return: Loss function
+        """
         if loss_fn is None or loss_fn == 'l2':
             return torch.nn.MSELoss().to(self.device)
         elif loss_fn == 'l1':
@@ -152,19 +202,41 @@ class Model:
 
     @staticmethod
     def __check_input_type(tensor_input: torch.Tensor) -> torch.Tensor:
+        """
+        Check input type
+        tensor_input: Input tensor
+        return: Input tensor with correct type
+        """
         # Convert Byte tensors to float if not already
         if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
             return tensor_input.float() / 255.0
         return tensor_input
 
     def set_batch_size(self, batch_size: int) -> None:
+        """
+        Set batch size
+        batch_size: Batch size
+        return: None
+        """
         self.batch_size = batch_size
 
     def set_val_data(self, val_input: torch.Tensor, val_target: torch.Tensor,
                      validation_frequency: int = 10) -> None:
+        """
+        Set validation data
+        val_input: Input data
+        val_target: Target data
+        validation_frequency: Validation frequency
+        return: None
+        """
         self.val_input = val_input
         self.val_target = val_target
         self.validate_every = validation_frequency
 
     def save_best_model(self, path: str) -> None:
+        """
+        Save best model
+        path: Path to save model
+        return: None
+        """
         torch.save(self.best_model['model'], path)
