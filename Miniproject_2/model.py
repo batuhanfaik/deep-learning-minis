@@ -26,7 +26,7 @@ class Model:
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
         self.validate_every = 0
-        self.batch_size = 100
+        self.batch_size = 64
 
     def save_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         model = self.model.to(torch.device("cpu"))
