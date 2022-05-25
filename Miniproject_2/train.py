@@ -9,7 +9,7 @@ from model import Model
 
 # for testing
 # DATA_PATH = '/Users/mismayil/Desktop/EPFL/W2022/DL/deep-learning-minis/Miniproject_2/miniproject_dataset/'
-DATA_PATH = 'miniproject_dataset/'
+DATA_PATH = '/root/deep-learning-minis/Miniproject_2/miniproject_dataset/'
 OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
 SHUFFLE_DATA = True
 
@@ -33,8 +33,8 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
 
 if __name__ == '__main__':
     torch.set_grad_enabled(False)
-    num_epochs = 1
-    batch_size = 1024
+    num_epochs = 100
+    batch_size = 256
     # Validation step is optional
     validation_frequency = 10
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         val_input = val_input[val_rand_permutation]
         val_target = val_target[val_rand_permutation]
 
-    model = Model()
+    model = Model(learning_rate=1e-2)
     model.set_batch_size(batch_size)
     # OPTIONAL: Set the validation data and frequency
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     # Load the pretrained model
     # model.load_pretrained_model(OUTPUT_MODEL_PATH)
     # Evaluate the model
-    prediction = model.predict(val_input)
+    prediction = model.predict(val_input) / 255.0
     # Check the PSNR
     psnr_val = psnr(prediction, val_target, device=device)
     print(f'PSNR: {psnr_val:.6f} dB')

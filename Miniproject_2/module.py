@@ -69,6 +69,8 @@ class Module(object):
         name_parts = name.split(PARAMETER_DELIMITER)
 
         if len(name_parts) == 1:
+            parameter = Parameter(parameter)
+            setattr(self, name, parameter)
             self.register_parameter(name, parameter)
             return
         

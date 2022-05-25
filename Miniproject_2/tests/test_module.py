@@ -13,16 +13,16 @@ def setup_modules():
     subsubmodule1 = Module("Subsubmodule1")
     subsubmodule2 = Module("Subsubmodule2")
 
-    subsubmodule1.register_parameter("weight", torch.tensor(1))
-    subsubmodule1.register_parameter("bias", torch.tensor(0))
-    subsubmodule2.register_parameter("weight", torch.tensor(3))
-    subsubmodule2.register_parameter("bias", torch.tensor(0))
+    subsubmodule1.register_parameter("weight", torch.tensor(1.0))
+    subsubmodule1.register_parameter("bias", torch.tensor(0.0))
+    subsubmodule2.register_parameter("weight", torch.tensor(3.0))
+    subsubmodule2.register_parameter("bias", torch.tensor(0.0))
 
     submodule1.register_module(subsubmodule1)
     submodule1.register_module(subsubmodule2)
 
-    submodule2.register_parameter("weight", torch.tensor(5))
-    submodule2.register_parameter("bias", torch.tensor(7))
+    submodule2.register_parameter("weight", torch.tensor(5.0))
+    submodule2.register_parameter("bias", torch.tensor(7.0))
 
     module.register_module(submodule1)
     module.register_module(submodule2)
@@ -39,9 +39,9 @@ class TestModule(unittest.TestCase):
 
         for name, parameter in named_parameters:
             if name == "weight":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(1)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(1.0)))
             else:
-                self.assertTrue(torch.allclose(parameter, torch.tensor(0)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(0.0)))
 
         named_parameters = module.named_parameters()
         name_set = set([name for name, _ in named_parameters])
@@ -56,17 +56,17 @@ class TestModule(unittest.TestCase):
 
         for name, parameter in named_parameters:
             if name == "Submodule1#0.Subsubmodule1#0.weight":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(1)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(1.0)))
             elif name == "Submodule1#0.Subsubmodule1#0.bias":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(0)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(0.0)))
             elif name == "Submodule1#0.Subsubmodule2#1.weight":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(3)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(3.0)))
             elif name == "Submodule1#0.Subsubmodule2#1.bias":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(0)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(0.0)))
             elif name == "Submodule2#1.weight":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(5)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(5.0)))
             elif name == "Submodule2#1.bias":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(7)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(7.0)))
     
     def test_load_state_dict(self):
         module, submodule1, submodule2, subsubmodule1, subsubmodule2 = setup_modules()
@@ -81,14 +81,14 @@ class TestModule(unittest.TestCase):
         for name, parameter in named_parameters:
             if name == "Submodule1#0.Subsubmodule1#0.weight":
                 print(parameter)
-                self.assertTrue(torch.allclose(parameter, torch.tensor(2)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(2.0)))
             elif name == "Submodule1#0.Subsubmodule1#0.bias":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(1)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(1.0)))
             elif name == "Submodule1#0.Subsubmodule2#1.weight":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(4)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(4.0)))
             elif name == "Submodule1#0.Subsubmodule2#1.bias":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(1)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(1.0)))
             elif name == "Submodule2#1.weight":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(6)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(6.0)))
             elif name == "Submodule2#1.bias":
-                self.assertTrue(torch.allclose(parameter, torch.tensor(8)))
+                self.assertTrue(torch.allclose(parameter, torch.tensor(8.0)))
