@@ -143,18 +143,16 @@ class Model:
         # If input is ByteTensor, convert to FloatTensor
         test_input = self.__check_input_type(test_input)
         # Predict on minibatches
-        denoised_output = torch.empty(test_input.shape).to(self.device)
+        denoised_output = torch.empty(test_input.shape, dtype=torch.uint8).to(self.device)
         with torch.no_grad():
             for batch_idx in range(0, len(test_input), self.batch_size):
                 # Get minibatch
                 batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
                     self.device)
                 # Forward pass
-                output = self.model(batch_input) * 255.0
-                # Cutoff values to [0, 255]
+                output = self.model(batch_input)
+                # Cutoff values to [0, 255] and convert to unsigned int tensor
                 output = torch.clamp(output, 0, 255)
-                # Convert to unsigned int tensor
-                output = output.to(torch.uint8)
                 # Save output
                 denoised_output[batch_idx:batch_idx + self.batch_size] = output
         return denoised_output
@@ -209,7 +207,7 @@ class Model:
         """
         # Convert Byte tensors to float if not already
         if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
-            return tensor_input.float() / 255.0
+            return tensor_input.float()
         return tensor_input
 
     def set_batch_size(self, batch_size: int) -> None:

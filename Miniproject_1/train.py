@@ -46,7 +46,7 @@ def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
 
 if __name__ == '__main__':
     num_epochs = 100
-    batch_size = 1024
+    batch_size = 2048
     # Validation step is optional
     validation_frequency = 1
 

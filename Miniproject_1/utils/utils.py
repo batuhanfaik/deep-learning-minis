@@ -17,8 +17,6 @@ def psnr(denoised_image: torch.Tensor, original_image: torch.Tensor,
     Returns:
         the PSNR between the two images
     """
-    assert denoised_image.shape == original_image.shape and original_image.ndim == 4
-    max_range = torch.tensor(max_range, device=device)
-    mse = torch.mean((denoised_image - original_image) ** 2, dim=(1, 2, 3)).mean()
-    eps = 1e-8
-    return 20 * torch.log10(max_range / torch.sqrt(mse + eps))
+    assert denoised_image.shape == original_image.shape and denoised_image.ndim == 4
+    return 20 * torch.log10(torch.tensor(max_range)) - 10 * torch.log10(
+        ((denoised_image - original_image) ** 2).mean((1, 2, 3))).mean()
