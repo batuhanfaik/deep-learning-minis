@@ -24,7 +24,7 @@ class Model:
             best_model: Dictionary to save best model
         """
         # Initialize model
-        self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = GORA().to(self.device)
         # Set the parameters
         self.optimizer = self.__get_optimizer()

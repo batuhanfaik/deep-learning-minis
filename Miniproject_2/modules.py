@@ -105,9 +105,9 @@ class Conv2d(Module):
         # check if dilation is int or tuple
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
+
         self.in_channels = in_channels
         self.out_channels = out_channels
-        # if kernel size/padding is a single int = k, extend it to a (k x k) tuple
         self.kernel_size = kernel_size
         self.padding = padding
         self.stride = stride
@@ -124,6 +124,7 @@ class Conv2d(Module):
         self.register_parameter("bias", self.bias)
 
     def init_weights(self, shape):
+        # based on https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
         k = self.groups / (self.in_channels * self.kernel_size[0] * self.kernel_size[1])
         w = torch.tensor([random.uniform(-math.sqrt(k), math.sqrt(k)) for _ in range(reduce(lambda a,b: a*b, list(shape)))])
         return w.reshape(shape)
@@ -137,10 +138,14 @@ class Conv2d(Module):
         return output
 
     def backward(self, *gradwrtoutput):
-        grad = get_gradient(gradwrtoutput)
-        batch_size, out_channels, out_height, out_width = grad.shape
-        # compute the gradients wrt the output
-        output_grad = grad.clone()
+        output_grad = get_gradient(gradwrtoutput)
+
+        if self.bias is not None:
+            bias_grad = output_grad.sum(dim=(0, 2, 3))
+            accumulate_grad(self.bias, bias_grad)
+
+        batch_size, out_channels, out_height, out_width = output_grad.shape
+
         # Take batch last
         for in_dim in range(len(output_grad.shape) - 1):
             output_grad = output_grad.transpose(in_dim, in_dim + 1)
@@ -148,8 +153,8 @@ class Conv2d(Module):
 
         # Get the input
         tensor_in = self.input_
-        tensor_in = unfold(tensor_in, self.kernel_size, self.dilation, self.padding,
-                           self.stride)
+        tensor_in = unfold(tensor_in, kernel_size=self.kernel_size, dilation=self.dilation, padding=self.padding,
+                           stride=self.stride)
         for in_dim in range(len(tensor_in.shape) - 1, 0, -1):
             tensor_in = tensor_in.transpose(in_dim, in_dim - 1)
         tensor_in = tensor_in.reshape(output_grad.shape[1], -1)
@@ -157,10 +162,6 @@ class Conv2d(Module):
         # Weight and bias gradient
         weight_grad = output_grad.matmul(tensor_in).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
-
-        if self.bias is not None:
-            bias_grad = grad.sum(dim=(0, 2, 3))
-            accumulate_grad(self.bias, bias_grad)
 
         # Input gradient
         in_height = (out_height - 1) * self.stride[0] - 2 * self.padding[0] + \
@@ -173,9 +174,9 @@ class Conv2d(Module):
                                         batch_size)
         for in_dim in range(len(input_grad.shape) - 1, 0, -1):
             input_grad = input_grad.transpose(in_dim, in_dim - 1)
-        input_grad = fold(input_grad, (in_height, in_width), self.kernel_size,
-                          self.dilation, self.padding, self.stride)
-        input_grad = autograd_tensor(input_grad, self, self.input_)
+
+        input_grad = fold(input_grad, output_size=(in_height, in_width), kernel_size=self.kernel_size,
+                          dilation=self.dilation, padding=self.padding, stride=self.stride)
         return input_grad
 
 
@@ -207,6 +208,7 @@ class TransposeConv2d(Module):
         assert len(dilation) == 2 if isinstance(dilation, tuple) else \
             isinstance(dilation, int)
         # check if dilation is int or tuple
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         self.in_channels = in_channels
@@ -226,6 +228,7 @@ class TransposeConv2d(Module):
         self.register_parameter("bias", self.bias)
 
     def init_weights(self, shape):
+        # based on https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose2d.html
         k = self.groups / (self.out_channels * self.kernel_size[0] * self.kernel_size[1])
         w = torch.tensor([random.uniform(-math.sqrt(k), math.sqrt(k)) for _ in range(reduce(lambda a,b: a*b, list(shape)))])
         return w.reshape(shape)
@@ -233,19 +236,23 @@ class TransposeConv2d(Module):
     def forward(self, *input):
         check_inputs(input)
         check_inputs(input[0].shape, length=4)
-        tensor_in = input[0]
-        self.input_ = tensor_in
+        self.input_ = input[0]
         out = conv_transpose2d(self.input_, weight=self.weight, bias=self.bias if self.bias is not None else None,
                               stride=self.stride, padding=self.padding, dilation=self.dilation)
         output = autograd_tensor(out, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
-        grad = get_gradient(gradwrtoutput)
-        batch_size, out_channels, out_height, out_width = grad.shape
-        output_grad = unfold(grad, kernel_size=self.kernel_size, dilation=self.dilation,
+        output_grad = get_gradient(gradwrtoutput)
+
+        if self.bias is not None:
+            bias_grad = output_grad.sum(dim=(0, 2, 3))
+            accumulate_grad(self.bias, bias_grad)
+
+        batch_size, out_channels, out_height, out_width = output_grad.shape
+        output_grad = unfold(output_grad, kernel_size=self.kernel_size, dilation=self.dilation,
                              padding=self.padding, stride=self.stride)
-        weight_grad = output_grad.clone()
+        weight_grad = output_grad
 
         for in_dim in range(len(weight_grad.shape) - 1, 0, -1):
             weight_grad = weight_grad.transpose(in_dim, in_dim - 1)
@@ -260,20 +267,15 @@ class TransposeConv2d(Module):
             weight_grad.reshape(tensor_in.shape[1], -1)).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
 
-        if self.bias is not None:
-            bias_grad = grad.sum(dim=(0, 2, 3))
-            accumulate_grad(self.bias, bias_grad)
+        in_height = math.floor((out_height + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
 
-        in_height = (out_height + 2 * self.padding[0] - self.dilation[0] *
-                     (self.kernel_size[0] - 1) - 1) // self.stride[0] + 1
-
-        in_width = (out_width + 2 * self.padding[1] - self.dilation[1] *
-                    (self.kernel_size[1] - 1) - 1) // self.stride[1] + 1
+        in_width = math.floor((out_width + 2 * self.padding[1] - self.dilation[1] *
+                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
 
         input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
-        output = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
-        output = autograd_tensor(output, self, self.input_)
-        return output
+        input_grad = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
+        return input_grad
 
 
 class ReLU(Module):
@@ -305,9 +307,9 @@ class Sigmoid(Module):
         return output
 
     def backward(self, *gradwrtoutput):
-        grad = get_gradient(gradwrtoutput)
+        output_grad = get_gradient(gradwrtoutput)
         input_sigmoid = sigmoid(self.input_)
-        input_grad = grad * input_sigmoid * (1 - input_sigmoid)
+        input_grad = output_grad * input_sigmoid * (1 - input_sigmoid)
         return input_grad
 
 
@@ -337,13 +339,13 @@ class MSE(Module):
         return autograd_tensor(loss, self, [self.input_, self.target])
 
     def backward(self, *gradwrtoutput):
-        grad = get_gradient(gradwrtoutput)
+        output_grad = get_gradient(gradwrtoutput)
         input_grad = 2 * (self.input_ - self.target)
 
         if self.reduction == "mean":
             input_grad = input_grad / reduce(lambda a, b: a * b, self.input_.shape)
 
-        return grad * input_grad
+        return output_grad * input_grad
 
 
 class MaxPool2d(Module):

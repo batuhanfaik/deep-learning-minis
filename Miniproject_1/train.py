@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # Validation step is optional
     validation_frequency = 1
 
-    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_input, train_target = get_data(mode='train', device=device)
     val_input, val_target = get_data(mode='val', device=device)
 

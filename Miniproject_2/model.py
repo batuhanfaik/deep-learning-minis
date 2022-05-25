@@ -15,18 +15,18 @@ class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = Sequential(
-            Conv2d(3, 24, 3, stride=2),
+            Conv2d(3, 16, 3, stride=2),
             ReLU(),
-            Conv2d(24, 48, 3, stride=2),
+            Conv2d(16, 16, 3, stride=2),
             ReLU(),
-            Upsampling(48, 16, 3, stride=2),
+            Upsampling(16, 16, 3, stride=2),
             ReLU(),
             Upsampling(16, 3, 4, stride=2),
             Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
         self.validate_every = 0
-        self.batch_size = 100
+        self.batch_size = 64
 
     def save_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         model = self.model.to(torch.device("cpu"))
@@ -44,6 +44,10 @@ class Model:
         print('Training...')
         # Set model in training mode
         self.model.train()
+
+        # If input is ByteTensor, convert to FloatTensor
+        train_input = self.__check_input_type(train_input)
+        train_target = self.__check_input_type(train_target)
 
         # Training loop
         loss_history = []
@@ -88,6 +92,9 @@ class Model:
         print('Validating...')
         # Set model in evaluation mode
         self.model.eval()
+        # If input is ByteTensor, convert to FloatTensor
+        test_input = self.__check_input_type(test_input)
+        test_target = self.__check_input_type(test_target)
         # Validation loop
         running_loss = 0.0
 
@@ -110,6 +117,7 @@ class Model:
         # Set model in evaluation mode
         self.model.eval()
         # Predict on minibatches
+        test_input = self.__check_input_type(test_input)
         denoised_output = torch.empty(test_input.shape).to(self.device)
 
         with torch.no_grad():
@@ -118,9 +126,9 @@ class Model:
                 batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
                     self.device)
                 # Forward pass
-                output = self.model(batch_input)
+                output = self.model(batch_input) * 255.0
                 # Clip output to [0, 255]
-                output = torch.clamp(output, 0, 255)
+                output = torch.clamp(output, 0, 255.0)
                 # Save output
                 denoised_output[batch_idx:batch_idx + self.batch_size] = output
 
@@ -134,3 +142,10 @@ class Model:
         self.val_input = val_input
         self.val_target = val_target
         self.validate_every = validation_frequency
+
+    @staticmethod
+    def __check_input_type(tensor_input: torch.Tensor) -> torch.Tensor:
+        # Convert Byte tensors to float if not already
+        if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
+            return tensor_input.float() / 255.0
+        return tensor_input
