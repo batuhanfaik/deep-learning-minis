@@ -1,12 +1,13 @@
 import torch
 import time
 from pathlib import Path
+import pickle
 
 try:
-    from .modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
+    from .modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d, Upsampling
     from .optim import SGD
 except:
-    from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d
+    from modules import ReLU, Sigmoid, TransposeConv2d, Sequential, MSE, Conv2d, Upsampling
     from optim import SGD
 
 class Model:
@@ -17,19 +18,26 @@ class Model:
             ReLU(),
             Conv2d(24, 48, 3, stride=2),
             ReLU(),
-            TransposeConv2d(48, 16, 3, stride=2),
+            Upsampling(48, 16, 3, stride=2),
             ReLU(),
-            TransposeConv2d(16, 3, 4, stride=2),
+            Upsampling(16, 3, 4, stride=2),
             Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
         self.validate_every = 0
         self.batch_size = 100
-        self.best_model = {'model': self.model.state_dict(), 'loss': float('inf')}
+
+    def save_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
+        model = self.model.to(torch.device("cpu"))
+        with open(ckpt_name, "wb") as ckpt_f:
+            pickle.dump(model.state_dict(), ckpt_f)
 
     def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
         print(f'Loading pretrained model from {ckpt_name}')
-        self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
+        with open(ckpt_name, "rb") as ckpt_f:
+            ckpt = pickle.load(ckpt_f)
+        self.model.load_state_dict(ckpt)
+        self.model = self.model.to(self.device)
 
     def train(self, train_input, train_target, num_epochs: int = 25) -> None:
         print('Training...')
@@ -71,9 +79,6 @@ class Model:
                 if epoch % self.validate_every == self.validate_every - 1:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.6f}')
-                    # Save model if validation loss is lower than the best model
-                    if loss < self.best_model['loss']:
-                        self.best_model['model'] = self.model.state_dict()
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')

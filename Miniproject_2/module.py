@@ -97,3 +97,6 @@ class Module(object):
             setattr(self, name, parameter.to(device))
 
         return self
+    
+    def param(self):
+        return [(parameter, parameter.grad) for parameter in self.parameters()]
