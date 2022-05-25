@@ -94,7 +94,10 @@ class Module(object):
             return self
         
         for name, parameter in self.named_parameters():
-            setattr(self, name, parameter.to(device))
+            parameter.data = parameter.data.to(device)
+            parameter.grad = parameter.grad.to(device)
+            setattr(self, name, parameter)
+            self.register_parameter(name, parameter)
 
         return self
     
