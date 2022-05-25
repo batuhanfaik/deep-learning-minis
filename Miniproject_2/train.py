@@ -34,7 +34,7 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
 if __name__ == '__main__':
     torch.set_grad_enabled(False)
     num_epochs = 100
-    batch_size = 256
+    batch_size = 1024
     # Validation step is optional
     validation_frequency = 10
 

@@ -15,13 +15,13 @@ class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = Sequential(
-            Conv2d(3, 96, 3, stride=2),
+            Conv2d(3, 16, 3, stride=2),
             ReLU(),
-            Conv2d(96, 192, 3, stride=2),
+            Conv2d(16, 16, 3, stride=2),
             ReLU(),
-            Upsampling(192, 192, 3, stride=2),
+            Upsampling(16, 16, 3, stride=2),
             ReLU(),
-            Upsampling(192, 3, 4, stride=2),
+            Upsampling(16, 3, 4, stride=2),
             Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
