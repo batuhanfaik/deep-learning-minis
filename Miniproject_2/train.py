@@ -33,7 +33,7 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
 
 if __name__ == '__main__':
     torch.set_grad_enabled(False)
-    num_epochs = 100
+    num_epochs = 1
     batch_size = 1024
     # Validation step is optional
     validation_frequency = 10
@@ -64,5 +64,5 @@ if __name__ == '__main__':
     psnr_val = psnr(prediction, val_target, device=device)
     print(f'PSNR: {psnr_val:.6f} dB')
     # Save the best model
-    torch.save(model.best_model['model'], OUTPUT_MODEL_PATH)
+    model.save_pretrained_model(OUTPUT_MODEL_PATH)
     print(f'Saved model to `{OUTPUT_MODEL_PATH}`')

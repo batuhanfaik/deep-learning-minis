@@ -120,7 +120,7 @@ class Conv2d(Module):
             self.init_weights((self.out_channels, self.in_channels // self.groups,
                                self.kernel_size[0], self.kernel_size[1])))
         self.bias = Parameter(self.init_weights((self.out_channels,))) if bias else None
-        self.register_parameter("weights", self.weight)
+        self.register_parameter("weight", self.weight)
         self.register_parameter("bias", self.bias)
 
     def init_weights(self, shape):
