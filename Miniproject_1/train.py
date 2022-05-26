@@ -88,5 +88,10 @@ if __name__ == '__main__':
     model, psnr_val = train(train_input, train_target, val_input, val_target, use_augmentation=False, wandb_name="test")
     # TODO: find best model
     # Save best model
-    # best_model.save_best_model(OUTPUT_MODEL_PATH)
-    # print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
+    best_psnr = 25
+    if psnr_val > best_psnr:
+        # Save the best model
+        model.save_best_model(OUTPUT_MODEL_PATH)
+        print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
+    else:
+        print(f'PSNR: {psnr_val:.6f} dB is not better than {best_psnr:.6f} dB')
