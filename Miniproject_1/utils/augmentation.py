@@ -13,17 +13,25 @@ class AugmentedDataset(Dataset):
         # define the transformations (can be changed later on)
         self.transforms = [
             TF.vflip,
-            TF.hflip
+            TF.hflip,
+            TF.adjust_brightness,
+            TF.adjust_contrast,
         ]
         # and the corresponding probabilities
-        self.probas = [0.5, 0.5]
+        self.probas = [0.5, 0.5, (0.5, 0.25), (0.5, 0.25)]
 
     def transform_pair(self, source_img, target_img):
         # apply the transformations sequentially
         for transform, prob in zip(self.transforms, self.probas):
-            if random.random() < prob:
-                source_img = transform(source_img)
-                target_img = transform(target_img)
+            if len(prob) > 1:
+                probability = prob[0]
+                args = prob[1:]
+            else:
+                probability = prob
+                args = []
+            if random.random() < probability:
+                source_img = transform(source_img) if len(args) == 0 else transform(source_img, *args)
+                target_img = transform(target_img) if len(args) == 0 else transform(target_img, *args)
 
         return source_img, target_img
 

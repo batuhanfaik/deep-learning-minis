@@ -32,7 +32,7 @@ class Model:
         self.optimizer = self.__get_optimizer()
         self.scheduler = self.__get_scheduler(factor=0.5)
         self.loss_fn = self.__get_loss_fn().to(self.device)
-        self.batch_size = 100
+        self.batch_size = 64
         # Validation data for performance tracking
         self.val_input, self.val_target = None, None
         self.validate_every = 0
@@ -48,7 +48,7 @@ class Model:
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor,
-              num_epochs: int = 25, use_augmentation: bool = False) -> None:
+              num_epochs: int = 1, use_augmentation: bool = False) -> None:
         """
         Train model
         train_input: Input data
@@ -207,6 +207,12 @@ class Model:
 
     @staticmethod
     def __get_augmenter(source: torch.Tensor, target: torch.Tensor):
+        """
+        Get augmenter
+        source: Source data
+        target: Target data
+        return: AugmentedDataset
+        """
         augmenter = AugmentedDataset(source, target, autotransform=True)
         return augmenter
 
