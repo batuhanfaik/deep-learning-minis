@@ -18,17 +18,16 @@ class AugmentedDataset(Dataset):
             TF.adjust_contrast,
         ]
         # and the corresponding probabilities
-        self.probas = [0.5, 0.5, (0.5, 0.25), (0.5, 0.25)]
+        self.probas = [(0.5,),
+                       (0.5,),
+                       (0.5, 0.25),
+                       (0.5, 0.25)]
 
     def transform_pair(self, source_img, target_img):
         # apply the transformations sequentially
         for transform, prob in zip(self.transforms, self.probas):
-            if len(prob) > 1:
-                probability = prob[0]
-                args = prob[1:]
-            else:
-                probability = prob
-                args = []
+            probability = prob[0]
+            args = prob[1:]
             if random.random() < probability:
                 source_img = transform(source_img) if len(args) == 0 else transform(source_img, *args)
                 target_img = transform(target_img) if len(args) == 0 else transform(target_img, *args)
