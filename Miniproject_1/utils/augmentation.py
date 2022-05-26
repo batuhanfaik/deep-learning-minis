@@ -25,9 +25,9 @@ class AugmentedDataset(Dataset):
         # and the corresponding probabilities
         self.probas = [(0.5,),
                        (0.5,),
-                       (0.5, 0.1),
-                       (0.5, 0.1),
-                       (0.5, 0.1),
+                       (0.5, random.choice([0.75, 1.25])),
+                       (0.5, random.choice([0.75, 1.25])),
+                       (0.5, random.choice([0.75, 1.25])),
                        (0.5, 0.05),
                        (0.5, 0.05),
                        (0.5, random.choice([90, 180, 270])),
