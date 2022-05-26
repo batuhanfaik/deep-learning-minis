@@ -13,12 +13,13 @@ import time
 
 
 class Model:
-    def __init__(self) -> None:
+    def __init__(self, lr: float = 1e-3, device: Union[torch.device, None] = None) -> None:
         """
         Initialize model
             device: Device to use
             model: Model to use
             optimizer: Optimizer to use
+            lr: Learning rate
             scheduler: Scheduler to use
             loss_fn: Loss function to use
             batch_size: Batch size to use
@@ -26,10 +27,13 @@ class Model:
             best_model: Dictionary to save best model
         """
         # Initialize model
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        else:
+            self.device = device
         self.model = GORA().to(self.device)
         # Set the parameters
-        self.optimizer = self.__get_optimizer()
+        self.optimizer = self.__get_optimizer(lr=lr)
         self.scheduler = self.__get_scheduler(factor=0.5)
         self.loss_fn = self.__get_loss_fn().to(self.device)
         self.batch_size = 64
@@ -241,14 +245,6 @@ class Model:
         if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
             return tensor_input.float()
         return tensor_input
-
-    def set_learning_rate(self, lr: float):
-        """
-        Set learning rate
-        lr: Learning rate
-        """
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = lr
 
     def set_batch_size(self, batch_size: int) -> None:
         """

@@ -1,3 +1,4 @@
+import itertools
 from typing import Tuple
 from pathlib import Path
 
@@ -64,8 +65,7 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
                            "use_augmentation": use_augmentation,
                            "learning_rate": learning_rate})
 
-    model = Model()
-    model.set_learning_rate(learning_rate)
+    model = Model(lr=learning_rate, device=DEVICE)
     model.set_batch_size(batch_size)
     # OPTIONAL: Set the validation data and frequency
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
@@ -84,23 +84,47 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
         wandb.log({"PSNR": psnr_val})
 
     # Save the best model
-    model_path = str(Path(__file__).parent / f'bestmodel_{wandb_name}.pth')
+    model_path = str(Path(__file__).parent / f'bestmodel_{psnr_val:.4f}.pth')
     model.save_best_model(model_path)
     print(f'Saved model to `{model_path}`')
     return model, psnr_val
 
 
 if __name__ == '__main__':
+    # hyperparams = {
+    #     'num_epochs': [50, 100, 150],
+    #     'batch_size': [32, 64, 128],
+    #     'shuffle_data': [True, False],
+    #     'use_augmentation': [True, False],
+    #     'learning_rate': [1e-2, 1e-3, 1e-4],
+    #     'wandb_name': ['hyperparam_search'],
+    # }
+    hyperparams = {
+        'num_epochs': [250],
+        'batch_size': [64],
+        'shuffle_data': [True],
+        'use_augmentation': [True],
+        'learning_rate': [1e-3],
+        'wandb_name': ['bestrun'],
+    }
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
-    model, psnr_val = train(train_input, train_target, val_input, val_target,
-                            num_epochs=250, use_augmentation=True,
-                            wandb_name='batuhanfaik')
-    # Save best model
-    best_psnr = 25.4
-    if psnr_val > best_psnr:
-        # Save the best model
-        model.save_best_model(OUTPUT_MODEL_PATH)
-        print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
-    else:
-        print(f'PSNR: {psnr_val:.6f} dB is not better than {best_psnr:.6f} dB')
+
+    # For all hyperparameter combinations
+    keys = hyperparams.keys()
+    values = (hyperparams[key] for key in keys)
+    combinations = [dict(zip(keys, combination)) for combination in
+                    itertools.product(*values)]
+
+    for params in combinations:
+        print(f'Training with {params}')
+        model, psnr_val = train(train_input, train_target, val_input, val_target,
+                                **params)
+        # Save best model
+        best_psnr = 25.4
+        if psnr_val > best_psnr:
+            # Save the best model
+            model.save_best_model(OUTPUT_MODEL_PATH)
+            print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
+        else:
+            print(f'PSNR: {psnr_val:.6f} dB is not better than {best_psnr:.6f} dB')
