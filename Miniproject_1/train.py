@@ -10,6 +10,7 @@ from model import Model
 
 DATA_PATH = 'miniproject_dataset/'
 OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
+BEST_PSNR = 25.4
 SHUFFLE_DATA = True
 USE_AUGMENTATION = True
 
@@ -46,7 +47,7 @@ def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
 
 
 if __name__ == '__main__':
-    num_epochs = 100
+    num_epochs = 1000
     batch_size = 64
     # Validation step is optional
     validation_frequency = 1
@@ -76,6 +77,9 @@ if __name__ == '__main__':
     # Check the PSNR
     psnr_val = psnr(prediction / 255.0, val_target / 255.0, device=device)
     print(f'PSNR: {psnr_val:.6f} dB')
-    # Save the best model
-    model.save_best_model(OUTPUT_MODEL_PATH)
-    print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
+    if psnr_val > BEST_PSNR:
+        # Save the best model
+        model.save_best_model(OUTPUT_MODEL_PATH)
+        print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
+    else:
+        print(f'PSNR: {psnr_val:.6f} dB is not better than {BEST_PSNR:.6f} dB')
