@@ -159,8 +159,9 @@ class Conv2d(Module):
         N, C_out, H_out, W_out = output_grad.shape
         N, C_in, H_in, W_in = self.input_.shape
 
-        # Compute input gradient
         output_grad = output_grad.transpose(0, 1).reshape(C_out, -1)
+
+        # Compute input gradient
         input_grad = output_grad.T.matmul(self.weight.reshape(C_out, -1))
         input_grad = input_grad.reshape(N, H_out * W_out, C_in * self.kernel_size[0] * self.kernel_size[1]).transpose(1, 2)
 
@@ -255,11 +256,11 @@ class TransposeConv2d(Module):
 
         N, C_in, H_in, W_in = self.input_.shape
 
-        # Compute input gradient
         output_grad = unfold(output_grad, kernel_size=self.kernel_size, dilation=self.dilation,
                              padding=self.padding, stride=self.stride)
         output_grad = output_grad.transpose(1, 2).reshape(N * H_in * W_in, -1)
 
+        # Compute input gradient
         input_grad = output_grad.matmul(self.weight.reshape(C_in, -1).T)
         input_grad = input_grad.reshape(N, H_in * W_in, C_in).transpose(1, 2).reshape(N, C_in, H_in, W_in)
 

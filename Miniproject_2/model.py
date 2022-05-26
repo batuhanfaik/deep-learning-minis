@@ -121,6 +121,7 @@ class Model:
             # Compute loss
             loss = self.criterion(output, batch_target)
             running_loss += loss.item()
+        self.model.train()
         # Return loss
         return running_loss / (len(test_input) / self.batch_size)
 

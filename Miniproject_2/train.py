@@ -57,9 +57,9 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
     # Load the pretrained model
     # model.load_pretrained_model(OUTPUT_MODEL_PATH)
     # Evaluate the model
-    prediction = model.predict(val_input)
+    prediction = model.predict(val_input) / 255.0
     # Check the PSNR
-    psnr_val = psnr(prediction / 255.0, val_target / 255.0, device=DEVICE)
+    psnr_val = psnr(prediction, val_target, device=DEVICE)
     print(f'PSNR: {psnr_val:.6f} dB')
 
     if wandb_name is not None:
@@ -76,4 +76,4 @@ if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
     model, psnr_val = train(train_input, train_target, val_input, val_target,
-                            num_epochs=100, hidden_dim=64, batch_size=32, validation_frequency=10, learning_rate=1e-1)
+                            num_epochs=100, hidden_dim=64, batch_size=64, validation_frequency=10, learning_rate=1e-1)

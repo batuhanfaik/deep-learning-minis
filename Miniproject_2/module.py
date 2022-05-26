@@ -53,9 +53,15 @@ class Module(object):
     
     def train(self):
         self._training = True
+
+        for module in self.modules():
+            module.train()
     
     def eval(self):
         self._training = False
+
+        for module in self.modules():
+            module.eval()
     
     def zero_grad(self):
         for parameter in self.parameters():
