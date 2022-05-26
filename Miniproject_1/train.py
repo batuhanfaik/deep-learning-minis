@@ -11,6 +11,7 @@ from model import Model
 DATA_PATH = 'miniproject_dataset/'
 OUTPUT_MODEL_PATH = str(Path(__file__).parent / 'bestmodel.pth')
 SHUFFLE_DATA = True
+USE_AUGMENTATION = True
 
 
 def get_data(data_path: str = DATA_PATH, mode: str = 'train',
@@ -46,7 +47,7 @@ def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
 
 if __name__ == '__main__':
     num_epochs = 100
-    batch_size = 2048
+    batch_size = 64
     # Validation step is optional
     validation_frequency = 1
 
@@ -67,13 +68,13 @@ if __name__ == '__main__':
     # OPTIONAL: Set the validation data and frequency
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
     # Train the model
-    model.train(train_input, train_target, num_epochs)
+    model.train(train_input, train_target, num_epochs, use_augmentation=USE_AUGMENTATION)
     # Load the pretrained model
     # model.load_pretrained_model(OUTPUT_MODEL_PATH)
     # Evaluate the model
     prediction = model.predict(val_input)
     # Check the PSNR
-    psnr_val = psnr(prediction, val_target, device=device)
+    psnr_val = psnr(prediction / 255.0, val_target / 255.0, device=device)
     print(f'PSNR: {psnr_val:.6f} dB')
     # Save the best model
     model.save_best_model(OUTPUT_MODEL_PATH)

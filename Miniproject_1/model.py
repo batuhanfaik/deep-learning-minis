@@ -3,8 +3,10 @@ from pathlib import Path
 
 try:
     from .utils import GORA
+    from .utils import AugmentedDataset
 except:
     from utils import GORA
+    from utils import AugmentedDataset
 
 import torch
 import time
@@ -46,7 +48,7 @@ class Model:
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor,
-              num_epochs: int = 25) -> None:
+              num_epochs: int = 25, use_augmentation: bool = False) -> None:
         """
         Train model
         train_input: Input data
@@ -60,6 +62,9 @@ class Model:
         # If input is ByteTensor, convert to FloatTensor
         train_input = self.__check_input_type(train_input)
         train_target = self.__check_input_type(train_target)
+        augmenter = None
+        if use_augmentation:
+            augmenter = self.__get_augmenter(train_input, train_target)
         # Training loop
         loss_history = []
         running_loss = 0.0
@@ -69,10 +74,12 @@ class Model:
             # Minibatch loop
             for batch_idx in range(0, len(train_input), self.batch_size):
                 # Get minibatch
-                batch_input = train_input[batch_idx:batch_idx + self.batch_size].to(
-                    self.device)
-                batch_target = train_target[batch_idx:batch_idx + self.batch_size].to(
-                    self.device)
+                if use_augmentation:
+                    batch_input, batch_target = augmenter[batch_idx:batch_idx + self.batch_size]
+                else:
+                    batch_input = train_input[batch_idx:batch_idx + self.batch_size]
+                    batch_target = train_target[batch_idx:batch_idx + self.batch_size]
+                batch_input, batch_target = batch_input.to(self.device), batch_target.to(self.device)
                 # Zero the gradients
                 self.optimizer.zero_grad()
                 # Forward pass
@@ -197,6 +204,11 @@ class Model:
             return torch.nn.L1Loss().to(self.device)
         else:
             raise ValueError(f'Unknown loss function {loss_fn}')
+
+    @staticmethod
+    def __get_augmenter(source: torch.Tensor, target: torch.Tensor):
+        augmenter = AugmentedDataset(source, target, autotransform=True)
+        return augmenter
 
     @staticmethod
     def __check_input_type(tensor_input: torch.Tensor) -> torch.Tensor:
