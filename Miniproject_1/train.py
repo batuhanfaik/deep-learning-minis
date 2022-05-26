@@ -58,12 +58,14 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
 
     if wandb_name is not None:
         import wandb
-        wandb.init(project="dl_miniproject1", name=wandb_name,
-                   config={"num_epochs": num_epochs, "batch_size": batch_size,
+        wandb.init(project="dl_miniproject1", name=wandb_name, reinit=True,
+                   config={"num_epochs": num_epochs,
+                           "batch_size": batch_size,
                            "val_freq": validation_frequency,
                            "shuffle_data": shuffle_data,
                            "use_augmentation": use_augmentation,
-                           "learning_rate": learning_rate})
+                           "learning_rate": learning_rate},
+                   )
 
     model = Model(lr=learning_rate, device=DEVICE)
     model.set_batch_size(batch_size)
@@ -82,11 +84,11 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
 
     if wandb_name is not None:
         wandb.log({"PSNR": psnr_val})
-
-    # Save the best model
-    model_path = str(Path(__file__).parent / f'bestmodel_{psnr_val:.4f}.pth')
-    model.save_best_model(model_path)
-    print(f'Saved model to `{model_path}`')
+        # Save the best model
+        model_path = str(
+            Path(__file__).parent / f'{wandb_name}_bestmodel_{psnr_val:.4f}.pth')
+        model.save_best_model(model_path)
+        print(f'Saved model to `{model_path}`')
     return model, psnr_val
 
 
@@ -97,34 +99,36 @@ if __name__ == '__main__':
     #     'shuffle_data': [True, False],
     #     'use_augmentation': [True, False],
     #     'learning_rate': [1e-2, 1e-3, 1e-4],
-    #     'wandb_name': ['hyperparam_search'],
     # }
     hyperparams = {
-        'num_epochs': [250],
+        'num_epochs': [2, 5, 3],
         'batch_size': [64],
         'shuffle_data': [True],
         'use_augmentation': [True],
         'learning_rate': [1e-3],
-        'wandb_name': ['bestrun'],
     }
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
 
     # For all hyperparameter combinations
+    test_name = 'bestrun'
+    best_psnr = 25.4
+
     keys = hyperparams.keys()
     values = (hyperparams[key] for key in keys)
     combinations = [dict(zip(keys, combination)) for combination in
                     itertools.product(*values)]
 
-    for params in combinations:
+    for idx, params in enumerate(combinations):
         print(f'Training with {params}')
         model, psnr_val = train(train_input, train_target, val_input, val_target,
+                                wandb_name=f'{test_name}_Run-{idx + 1}',
                                 **params)
         # Save best model
-        best_psnr = 25.4
         if psnr_val > best_psnr:
             # Save the best model
             model.save_best_model(OUTPUT_MODEL_PATH)
             print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
+            best_psnr = psnr_val
         else:
             print(f'PSNR: {psnr_val:.6f} dB is not better than {best_psnr:.6f} dB')
