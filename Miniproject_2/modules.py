@@ -83,28 +83,27 @@ class Conv2d(Module):
                  stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
                  groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1, padding_mode: str = 'zeros') -> None:
         super().__init__("Conv2d")
-        # Check if kernel size is a tuple of length 2 or int
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
             isinstance(kernel_size, int)
-        # check if kernel size is int or tuple
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
-        # Check if stride is a tuple of length 2 or int
+
         assert len(stride) == 2 if isinstance(stride, tuple) else \
             isinstance(stride, int)
-        # check if stride is int or tuple
+
         if isinstance(stride, int):
             stride = (stride, stride)
-        # Check if padding is a tuple of length 2 or int
+
         assert len(padding) == 2 if isinstance(padding, tuple) else \
             isinstance(padding, int)
-        # check if padding is int or tuple
+
         if isinstance(padding, int):
             padding = (padding, padding)
-        # Check if dilation is a tuple of length 2 or int
+
         assert len(dilation) == 2 if isinstance(dilation, tuple) else \
             isinstance(dilation, int)
-        # check if dilation is int or tuple
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
 
@@ -116,8 +115,6 @@ class Conv2d(Module):
         self.dilation = dilation
         self.padding_mode = padding_mode
         self.groups = groups
-        # initialize and register the kernels - we want out_channels kernels
-        # each of size in_channels x kernel_h x kernel_w
         self.weight = Parameter(
             self.init_weights((self.out_channels, self.in_channels // self.groups,
                                self.kernel_size[0], self.kernel_size[1])))
@@ -150,9 +147,10 @@ class Conv2d(Module):
 
         batch_size, out_channels, out_height, out_width = output_grad.shape
 
-        # Take batch last
+        # Transpose to batch last
         for in_dim in range(len(output_grad.shape) - 1):
             output_grad = output_grad.transpose(in_dim, in_dim + 1)
+
         output_grad = output_grad.reshape(out_channels, -1)
 
         # Get the input
@@ -163,17 +161,13 @@ class Conv2d(Module):
             tensor_in = tensor_in.transpose(in_dim, in_dim - 1)
         tensor_in = tensor_in.reshape(output_grad.shape[1], -1)
 
-        # Weight and bias gradient
         weight_grad = output_grad.matmul(tensor_in).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
 
         del weight_grad
 
         # Input gradient
-        in_height = (out_height - 1) * self.stride[0] - 2 * self.padding[0] + \
-                     self.dilation[0] * (self.kernel_size[0] - 1) + 1
-        in_width = (out_width - 1) * self.stride[1] - 2 * self.padding[1] + \
-                    self.dilation[1] * (self.kernel_size[1] - 1) + 1
+        _, _, in_height, in_width = self.input_.shape
         input_grad = self.weight.reshape(out_channels, -1).T.matmul(output_grad)
         input_grad = input_grad.reshape(self.in_channels * self.kernel_size[0] *
                                         self.kernel_size[1], out_height * out_width,
@@ -183,7 +177,9 @@ class Conv2d(Module):
 
         input_grad = fold(input_grad, output_size=(in_height, in_width), kernel_size=self.kernel_size,
                           dilation=self.dilation, padding=self.padding, stride=self.stride)
+
         self.input_ = None
+
         return input_grad
 
 
@@ -193,31 +189,30 @@ class TransposeConv2d(Module):
                  groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1,
                  padding_mode: str = 'zeros') -> None:
         super().__init__('TransposeConv2d')
-        # Check if kernel size is a tuple of length 2 or int
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
             isinstance(kernel_size, int)
-        # check if kernel size is int or tuple
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
-        # Check if stride is a tuple of length 2 or int
+
         assert len(stride) == 2 if isinstance(stride, tuple) else \
             isinstance(stride, int)
-        # check if stride is int or tuple
+
         if isinstance(stride, int):
             stride = (stride, stride)
-        # Check if padding is a tuple of length 2 or int
+
         assert len(padding) == 2 if isinstance(padding, tuple) else \
             isinstance(padding, int)
-        # check if padding is int or tuple
+
         if isinstance(padding, int):
             padding = (padding, padding)
-        # Check if dilation is a tuple of length 2 or int
+
         assert len(dilation) == 2 if isinstance(dilation, tuple) else \
             isinstance(dilation, int)
-        # check if dilation is int or tuple
 
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
@@ -278,12 +273,7 @@ class TransposeConv2d(Module):
 
         del weight_grad
 
-        in_height = math.floor((out_height + 2 * self.padding[0] - self.dilation[0] *
-                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-
-        in_width = math.floor((out_width + 2 * self.padding[1] - self.dilation[1] *
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-
+        _, _, in_height, in_width = self.input_.shape
         input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
         input_grad = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
 

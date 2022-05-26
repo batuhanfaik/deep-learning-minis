@@ -32,20 +32,21 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tens
     padding = (padding, padding) if isinstance(padding, int) else padding
     dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
 
-    N_in, C_in, H_in, W_in = input_.shape
+    N, C_in, H_in, W_in = input_.shape
     C_out, C_ker, H_ker, W_ker = weight.shape
-
-    H_out = floor((H_in + 2 * padding[0] - dilation[0] * (H_ker - 1) - 1) / stride[0] + 1)
-    W_out = floor((W_in + 2 * padding[1] - dilation[1] * (W_ker - 1) - 1) / stride[1] + 1)
+    kernel_size = (H_ker, W_ker)
 
     if C_in != C_ker: raise ValueError(
         "Numbers of channels in the input and kernel are different.")
 
-    input_unfolded = unfold(input_, kernel_size=(H_ker, W_ker), padding=padding,
+    H_out = floor((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+    W_out = floor((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+
+    input_unfolded = unfold(input_, kernel_size=kernel_size, padding=padding,
                             stride=stride, dilation=dilation)
-    kernels_flattened = weight.reshape(C_out, C_ker * H_ker * W_ker).T
+    kernels_flattened = weight.reshape(C_out, -1).T
     output = input_unfolded.transpose(1, 2).matmul(kernels_flattened).transpose(1, 2)
-    output = output.reshape(N_in, C_out, H_out, W_out)
+    output = output.reshape(N, C_out, H_out, W_out)
 
     if bias is not None:
         output += bias.reshape(1, -1, 1, 1)
@@ -56,30 +57,32 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tens
 def conv_transpose2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tensor] = None,
                      stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
                      dilation: Union[int, Tuple] = 1):
-    batch_size, in_channels, in_height, in_width = input_.shape
-    _, out_channels, kernel_h, kernel_w = weight.shape
-    kernel_size = (kernel_h, kernel_w)
-
     stride = (stride, stride) if isinstance(stride, int) else stride
     padding = (padding, padding) if isinstance(padding, int) else padding
     dilation = (dilation, dilation) if isinstance(dilation, int) else dilation
 
-    # Take batch last
+    N, C_in, H_in, W_in = input_.shape
+    C_ker, C_out, H_ker, W_ker = weight.shape
+    kernel_size = (H_ker, W_ker)
+
+    if C_in != C_ker: raise ValueError(
+        "Numbers of channels in the input and kernel are different.")
+
+    # Transpose to batch last
     for in_dim in range(len(input_.shape) - 1):
         input_ = input_.transpose(in_dim, in_dim + 1)
 
-    input_ = input_.reshape(in_channels, -1)
-    output = weight.reshape(in_channels, -1).T.matmul(input_)
-    output_t = output.reshape(out_channels * kernel_size[0] * kernel_size[1],
-                              in_height * in_width, batch_size)
+    output = weight.reshape(C_in, -1).T.matmul(input_.reshape(C_in, -1))
+    output = output.reshape(C_out * kernel_size[0] * kernel_size[1], H_in * W_in, N)
+
     # Transpose to batch first
-    for in_dim in range(len(output_t.shape) - 1, 0, -1):
-        output_t = output_t.transpose(in_dim, in_dim - 1)
-    out_height = (in_height - 1) * stride[0] - 2 * padding[0] + dilation[0] * (
-            kernel_size[0] - 1) + 1
-    out_width = (in_width - 1) * stride[1] - 2 * padding[1] + dilation[1] * (
-            kernel_size[1] - 1) + 1
-    output = fold(output_t, (out_height, out_width), kernel_size=kernel_size,
+    for in_dim in range(len(output.shape) - 1, 0, -1):
+        output = output.transpose(in_dim, in_dim - 1)
+
+    H_out = (H_in - 1) * stride[0] - 2 * padding[0] + dilation[0] * (kernel_size[0] - 1) + 1
+    W_out = (W_in - 1) * stride[1] - 2 * padding[1] + dilation[1] * (kernel_size[1] - 1) + 1
+
+    output = fold(output, (H_out, W_out), kernel_size=kernel_size,
                   dilation=dilation, padding=padding, stride=stride)
 
     if bias is not None:
