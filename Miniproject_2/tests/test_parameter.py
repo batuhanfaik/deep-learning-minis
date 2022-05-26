@@ -20,14 +20,14 @@ class TestParameter(unittest.TestCase):
         parameter = Parameter(data, requires_grad=False)
         self.assertTrue(torch.equal(parameter.grad, torch.zeros_like(parameter.grad)))
 
-        grads = [torch.tensor([2.0, 3.0, 5.0]), torch.tensor([1.0, 0.0, 1.0])]
+        grad = torch.tensor([1.0, 0.0, 1.0])
 
-        accumulate_grad(parameter, *grads)
+        accumulate_grad(parameter, grad)
         self.assertTrue(torch.equal(parameter.grad, torch.zeros_like(parameter.grad)))
 
         parameter.requires_grad = True
-        accumulate_grad(parameter, *grads)
-        self.assertTrue(torch.equal(parameter.grad, torch.tensor([3.0, 3.0, 6.0])))
+        accumulate_grad(parameter, grad)
+        self.assertTrue(torch.equal(parameter.grad, torch.tensor([1.0, 0.0, 1.0])))
         
         zero_grad(parameter)
         self.assertTrue(torch.equal(parameter.grad, torch.zeros_like(parameter.grad)))

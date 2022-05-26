@@ -73,6 +73,8 @@ class Linear(Module):
         if self.bias is not None:
             accumulate_grad(self.bias, bias_grad)
 
+        self.input_ = None
+
         return input_grad
 
 
@@ -144,6 +146,8 @@ class Conv2d(Module):
             bias_grad = output_grad.sum(dim=(0, 2, 3))
             accumulate_grad(self.bias, bias_grad)
 
+        del bias_grad
+
         batch_size, out_channels, out_height, out_width = output_grad.shape
 
         # Take batch last
@@ -163,6 +167,8 @@ class Conv2d(Module):
         weight_grad = output_grad.matmul(tensor_in).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
 
+        del weight_grad
+
         # Input gradient
         in_height = (out_height - 1) * self.stride[0] - 2 * self.padding[0] + \
                      self.dilation[0] * (self.kernel_size[0] - 1) + 1
@@ -177,6 +183,7 @@ class Conv2d(Module):
 
         input_grad = fold(input_grad, output_size=(in_height, in_width), kernel_size=self.kernel_size,
                           dilation=self.dilation, padding=self.padding, stride=self.stride)
+        self.input_ = None
         return input_grad
 
 
@@ -248,6 +255,8 @@ class TransposeConv2d(Module):
         if self.bias is not None:
             bias_grad = output_grad.sum(dim=(0, 2, 3))
             accumulate_grad(self.bias, bias_grad)
+        
+        del bias_grad
 
         batch_size, out_channels, out_height, out_width = output_grad.shape
         output_grad = unfold(output_grad, kernel_size=self.kernel_size, dilation=self.dilation,
@@ -267,6 +276,8 @@ class TransposeConv2d(Module):
             weight_grad.reshape(tensor_in.shape[1], -1)).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
 
+        del weight_grad
+
         in_height = math.floor((out_height + 2 * self.padding[0] - self.dilation[0] *
                      (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
 
@@ -275,6 +286,9 @@ class TransposeConv2d(Module):
 
         input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
         input_grad = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
+
+        self.input_ = None
+
         return input_grad
 
 
@@ -292,6 +306,7 @@ class ReLU(Module):
     def backward(self, *gradwrtoutput):
         grad = get_gradient(gradwrtoutput)
         input_grad = grad * (self.input_ > 0).int()
+        self.input_ = None
         return input_grad
 
 
@@ -310,6 +325,7 @@ class Sigmoid(Module):
         output_grad = get_gradient(gradwrtoutput)
         input_sigmoid = sigmoid(self.input_)
         input_grad = output_grad * input_sigmoid * (1 - input_sigmoid)
+        self.input_ = None
         return input_grad
 
 
@@ -344,6 +360,9 @@ class MSE(Module):
 
         if self.reduction == "mean":
             input_grad = input_grad / reduce(lambda a, b: a * b, self.input_.shape)
+
+        self.input_ = None
+        self.target = None
 
         return output_grad * input_grad
 
@@ -393,6 +412,8 @@ class MaxPool2d(Module):
                               stride=self.stride, padding=self.padding,
                               dilation=self.dilation)
             input_grads.append(input_grad)
+
+        self.input_ = None
 
         return torch.cat(input_grads, dim=1)
 
