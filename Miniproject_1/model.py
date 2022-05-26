@@ -2,18 +2,16 @@ from typing import Union
 from pathlib import Path
 
 try:
-    from .utils import GORA
-    from .utils import AugmentedDataset
+    from .utils.gora import GORA
 except:
-    from utils import GORA
-    from utils import AugmentedDataset
+    from utils.gora import GORA
 
 import torch
 import time
 
 
 class Model:
-    def __init__(self) -> None:
+    def __init__(self, learning_rate=1e-3) -> None:
         """
         Initialize model
             device: Device to use
@@ -29,7 +27,7 @@ class Model:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = GORA().to(self.device)
         # Set the parameters
-        self.optimizer = self.__get_optimizer()
+        self.optimizer = self.__get_optimizer(lr=learning_rate)
         self.scheduler = self.__get_scheduler(factor=0.5)
         self.loss_fn = self.__get_loss_fn().to(self.device)
         self.batch_size = 64
@@ -48,7 +46,7 @@ class Model:
         self.model.load_state_dict(torch.load(ckpt_name, map_location=self.device))
 
     def train(self, train_input: torch.Tensor, train_target: torch.Tensor,
-              num_epochs: int = 1, use_augmentation: bool = False) -> None:
+              num_epochs: int = 1, use_augmentation: bool = False, use_wandb: bool = False) -> None:
         """
         Train model
         train_input: Input data
@@ -64,11 +62,19 @@ class Model:
         train_target = self.__check_input_type(train_target)
         augmenter = None
         if use_augmentation:
+            try:
+                from .utils import AugmentedDataset
+            except:
+                from utils import AugmentedDataset
             augmenter = self.__get_augmenter(train_input, train_target)
         # Training loop
         loss_history = []
         running_loss = 0.0
         start_time = time.time()
+
+        if use_wandb:
+            import wandb
+
         for epoch in range(num_epochs):
             print(f'Epoch {epoch + 1} / {num_epochs}')
             # Minibatch loop
@@ -96,11 +102,17 @@ class Model:
             running_loss = 0.0
             # Print loss
             print(f'\tLoss: {loss_history[-1]:.6f}')
+
+            if use_wandb:
+                wandb.log({"train_loss": loss_history[-1]})
+
             # Validate if validation frequency is set, which requires a validation set
             if self.validate_every:
                 if epoch % self.validate_every == self.validate_every - 1:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.6f}')
+                    if use_wandb:
+                        wandb.log({"val_loss": loss.item()})
                     self.scheduler.step(loss)
                     # Save model if validation loss is lower than the best model
                     if loss < self.best_model['loss']:

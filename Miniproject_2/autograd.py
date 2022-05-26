@@ -1,5 +1,5 @@
 import torch
-from functools import partial, reduce
+from functools import partial
 
 try:
     from .utils import get_gradient
