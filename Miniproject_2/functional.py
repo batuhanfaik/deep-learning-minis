@@ -42,10 +42,9 @@ def conv2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[torch.Tens
     H_out = floor((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
     W_out = floor((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
 
-    input_unfolded = unfold(input_, kernel_size=kernel_size, padding=padding,
-                            stride=stride, dilation=dilation)
-    kernels_flattened = weight.reshape(C_out, -1).T
-    output = input_unfolded.transpose(1, 2).matmul(kernels_flattened).transpose(1, 2)
+    input_ = unfold(input_, kernel_size=kernel_size, padding=padding,
+                    stride=stride, dilation=dilation)
+    output = input_.transpose(1, 2).matmul(weight.reshape(C_out, -1).T).transpose(1, 2)
     output = output.reshape(N, C_out, H_out, W_out)
 
     if bias is not None:
@@ -68,16 +67,9 @@ def conv_transpose2d(input_: torch.Tensor, weight: torch.Tensor, bias: Optional[
     if C_in != C_ker: raise ValueError(
         "Numbers of channels in the input and kernel are different.")
 
-    # Transpose to batch last
-    for in_dim in range(len(input_.shape) - 1):
-        input_ = input_.transpose(in_dim, in_dim + 1)
-
-    output = weight.reshape(C_in, -1).T.matmul(input_.reshape(C_in, -1))
-    output = output.reshape(C_out * kernel_size[0] * kernel_size[1], H_in * W_in, N)
-
-    # Transpose to batch first
-    for in_dim in range(len(output.shape) - 1, 0, -1):
-        output = output.transpose(in_dim, in_dim - 1)
+    input_ = input_.transpose(0, 1).reshape(C_in, -1)
+    output = input_.T.matmul(weight.reshape(C_in, -1))
+    output = output.reshape(N, H_in * W_in, C_out * kernel_size[0] * kernel_size[1]).transpose(1, 2)
 
     H_out = (H_in - 1) * stride[0] - 2 * padding[0] + dilation[0] * (kernel_size[0] - 1) + 1
     W_out = (W_in - 1) * stride[1] - 2 * padding[1] + dilation[1] * (kernel_size[1] - 1) + 1

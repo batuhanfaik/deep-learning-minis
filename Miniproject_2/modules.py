@@ -33,6 +33,9 @@ class Sequential(Module):
         for module in self.modules():
             output = module.forward(output)
 
+        if not self._training:
+            return output
+
         return autograd_tensor(output, self, input[0])
 
     def backward(self, *gradwrtoutput):
@@ -58,9 +61,14 @@ class Linear(Module):
 
     def forward(self, *input):
         check_inputs(input)
-        self.input_ = input[0]
-        output = autograd_tensor(linear(self.input_, self.weight, self.bias),
-                              self, self.input_)
+        input_ = input[0]
+        output = linear(input_, self.weight, self.bias)
+
+        if not self._training:
+            return output
+
+        self.input_ = input_
+        output = autograd_tensor(output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -130,10 +138,15 @@ class Conv2d(Module):
 
     def forward(self, *input_):
         check_inputs(input_)
-        self.input_ = input_[0]
-        output = autograd_tensor(conv2d(self.input_, self.weight, self.bias,
-                                     padding=self.padding, stride=self.stride, dilation=self.dilation),
-                              self, self.input_)
+        input_ = input_[0]
+        output = conv2d(input_, self.weight, self.bias,
+                        padding=self.padding, stride=self.stride, dilation=self.dilation)
+        
+        if not self._training:
+            return output
+
+        self.input_ = input_
+        output = autograd_tensor(output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -145,38 +158,25 @@ class Conv2d(Module):
 
         del bias_grad
 
-        batch_size, out_channels, out_height, out_width = output_grad.shape
+        N, C_out, H_out, W_out = output_grad.shape
+        N, C_in, H_in, W_in = self.input_.shape
 
-        # Transpose to batch last
-        for in_dim in range(len(output_grad.shape) - 1):
-            output_grad = output_grad.transpose(in_dim, in_dim + 1)
+        # Compute input gradient
+        output_grad = output_grad.transpose(0, 1).reshape(C_out, -1)
+        input_grad = output_grad.T.matmul(self.weight.reshape(C_out, -1))
+        input_grad = input_grad.reshape(N, H_out * W_out, C_in * self.kernel_size[0] * self.kernel_size[1]).transpose(1, 2)
 
-        output_grad = output_grad.reshape(out_channels, -1)
+        input_grad = fold(input_grad, output_size=(H_in, W_in), kernel_size=self.kernel_size,
+                          dilation=self.dilation, padding=self.padding, stride=self.stride)
 
-        # Get the input
-        tensor_in = self.input_
-        tensor_in = unfold(tensor_in, kernel_size=self.kernel_size, dilation=self.dilation, padding=self.padding,
-                           stride=self.stride)
-        for in_dim in range(len(tensor_in.shape) - 1, 0, -1):
-            tensor_in = tensor_in.transpose(in_dim, in_dim - 1)
-        tensor_in = tensor_in.reshape(output_grad.shape[1], -1)
-
-        weight_grad = output_grad.matmul(tensor_in).reshape(self.weight.shape)
+        # Compute weight gradient
+        input_ = unfold(self.input_, kernel_size=self.kernel_size, dilation=self.dilation, padding=self.padding,
+                        stride=self.stride)
+        input_ = input_.transpose(1, 2).reshape(N * H_out * W_out, -1)
+        weight_grad = output_grad.matmul(input_).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
 
         del weight_grad
-
-        # Input gradient
-        _, _, in_height, in_width = self.input_.shape
-        input_grad = self.weight.reshape(out_channels, -1).T.matmul(output_grad)
-        input_grad = input_grad.reshape(self.in_channels * self.kernel_size[0] *
-                                        self.kernel_size[1], out_height * out_width,
-                                        batch_size)
-        for in_dim in range(len(input_grad.shape) - 1, 0, -1):
-            input_grad = input_grad.transpose(in_dim, in_dim - 1)
-
-        input_grad = fold(input_grad, output_size=(in_height, in_width), kernel_size=self.kernel_size,
-                          dilation=self.dilation, padding=self.padding, stride=self.stride)
 
         self.input_ = None
 
@@ -238,44 +238,43 @@ class TransposeConv2d(Module):
     def forward(self, *input):
         check_inputs(input)
         check_inputs(input[0].shape, length=4)
-        self.input_ = input[0]
-        out = conv_transpose2d(self.input_, weight=self.weight, bias=self.bias if self.bias is not None else None,
-                              stride=self.stride, padding=self.padding, dilation=self.dilation)
-        output = autograd_tensor(out, self, self.input_)
+        input_ = input[0]
+        output = conv_transpose2d(input_, weight=self.weight, bias=self.bias if self.bias is not None else None,
+                                  stride=self.stride, padding=self.padding, dilation=self.dilation)
+        
+        if not self._training:
+            return output
+
+        self.input_ = input_
+        output = autograd_tensor(output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
         output_grad = get_gradient(gradwrtoutput)
 
+        # Compute bias gradient
         if self.bias is not None:
             bias_grad = output_grad.sum(dim=(0, 2, 3))
             accumulate_grad(self.bias, bias_grad)
         
         del bias_grad
 
-        batch_size, out_channels, out_height, out_width = output_grad.shape
+        N, C_in, H_in, W_in = self.input_.shape
+
+        # Compute input gradient
         output_grad = unfold(output_grad, kernel_size=self.kernel_size, dilation=self.dilation,
                              padding=self.padding, stride=self.stride)
-        weight_grad = output_grad
+        output_grad = output_grad.transpose(1, 2).reshape(N * H_in * W_in, -1)
 
-        for in_dim in range(len(weight_grad.shape) - 1, 0, -1):
-            weight_grad = weight_grad.transpose(in_dim, in_dim - 1)
+        input_grad = output_grad.matmul(self.weight.reshape(C_in, -1).T)
+        input_grad = input_grad.reshape(N, H_in * W_in, C_in).transpose(1, 2).reshape(N, C_in, H_in, W_in)
 
-        tensor_in = self.input_
-
-        for in_dim in range(len(tensor_in.shape) - 1):
-            tensor_in = tensor_in.transpose(in_dim, in_dim + 1)
-
-        tensor_in = tensor_in.reshape(self.in_channels, -1)
-        weight_grad = tensor_in.matmul(
-            weight_grad.reshape(tensor_in.shape[1], -1)).reshape(self.weight.shape)
+        # Compute weight gradient
+        input_ = self.input_.reshape(C_in, -1)
+        weight_grad = input_.matmul(output_grad).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
 
         del weight_grad
-
-        _, _, in_height, in_width = self.input_.shape
-        input_grad = self.weight.reshape(self.in_channels, -1).matmul(output_grad)
-        input_grad = input_grad.reshape(batch_size, self.in_channels, in_height, in_width)
 
         self.input_ = None
 
@@ -289,8 +288,14 @@ class ReLU(Module):
 
     def forward(self, *input):
         check_inputs(input)
-        self.input_ = input[0]
-        output = autograd_tensor(relu(self.input_), self, self.input_)
+        input_ = input[0]
+        output = relu(input_)
+
+        if not self._training:
+            return output
+
+        self.input_ = input_
+        output = autograd_tensor(output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -307,8 +312,14 @@ class Sigmoid(Module):
 
     def forward(self, *input):
         check_inputs(input)
-        self.input_ = input[0]
-        output = autograd_tensor(sigmoid(self.input_), self, self.input_)
+        input_ = input[0]
+        output = sigmoid(input_)
+
+        if not self._training:
+            return output
+
+        self.input_ = input_
+        output = autograd_tensor(output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
@@ -328,20 +339,25 @@ class MSE(Module):
 
     def forward(self, *input):
         check_inputs(input, 2)
-        self.input_ = input[0]
-        self.target = input[1]
+        input_ = input[0]
+        target = input[1]
 
-        if self.input_.shape != self.target.shape:
+        if input_.shape != target.shape:
             raise ValueError("Input and target shapes should be same")
 
-        error = (self.input_ - self.target) ** 2
+        error = (input_ - target) ** 2
         loss = error
 
         if self.reduction == "sum":
             loss = error.sum()
         elif self.reduction == "mean":
             loss = error.mean()
+        
+        if not self._training:
+            return loss
 
+        self.input_ = input_
+        self.target = target
         return autograd_tensor(loss, self, [self.input_, self.target])
 
     def backward(self, *gradwrtoutput):
@@ -375,11 +391,16 @@ class MaxPool2d(Module):
 
     def forward(self, *input):
         check_inputs(input)
-        self.input_ = input[0]
-        pool_output = max_pool2d(self.input_, kernel_size=self.kernel_size,
-                                 stride=self.stride, padding=self.padding,
-                                 dilation=self.dilation)
-        output = autograd_tensor(pool_output, self, self.input_)
+        input_ = input[0]
+        output = max_pool2d(input_, kernel_size=self.kernel_size,
+                            stride=self.stride, padding=self.padding,
+                            dilation=self.dilation)
+        
+        if not self._training:
+            return output
+
+        self.input_ = input_
+        output = autograd_tensor(output, self, self.input_)
         return output
 
     def backward(self, *gradwrtoutput):
