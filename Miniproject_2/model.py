@@ -15,13 +15,13 @@ class Model:
     def __init__(self, learning_rate: float = 1e-3) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = Sequential(
-            Conv2d(3, 16, 3, stride=2),
+            Conv2d(3, 64, 3, stride=2, padding=1),
             ReLU(),
-            Conv2d(16, 16, 3, stride=2),
+            Conv2d(64, 64, 3, stride=2, padding=1),
             ReLU(),
-            Upsampling(16, 16, 3, stride=2),
+            Upsampling(64, 64, 2, stride=2),
             ReLU(),
-            Upsampling(16, 3, 4, stride=2),
+            Upsampling(64, 3, 2, stride=2),
             Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
@@ -39,6 +39,7 @@ class Model:
             ckpt = pickle.load(ckpt_f)
         self.model.load_state_dict(ckpt)
         self.model = self.model.to(self.device)
+        self.optimizer.load_parameters(self.model.parameters())
 
     def train(self, train_input, train_target, num_epochs: int = 25) -> None:
         print('Training...')

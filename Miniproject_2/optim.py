@@ -18,6 +18,9 @@ class Optimizer(object):
     def step(self):
         raise NotImplementedError
 
+    def load_parameters(self, parameters):
+        self.parameters = parameters
+
 
 class SGD(Optimizer):
     def __init__(self, parameters: List[Parameter], lr: float = 0.01) -> None:

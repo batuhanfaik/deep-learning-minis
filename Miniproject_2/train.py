@@ -49,14 +49,14 @@ if __name__ == '__main__':
         val_input = val_input[val_rand_permutation]
         val_target = val_target[val_rand_permutation]
 
-    model = Model(learning_rate=1e-2)
+    model = Model(learning_rate=1e-1)
     model.set_batch_size(batch_size)
     # OPTIONAL: Set the validation data and frequency
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
-    # Train the model
-    model.train(train_input, train_target, num_epochs)
     # Load the pretrained model
     # model.load_pretrained_model(OUTPUT_MODEL_PATH)
+    # Train the model
+    model.train(train_input, train_target, num_epochs)
     # Evaluate the model
     prediction = model.predict(val_input) / 255.0
     # Check the PSNR
