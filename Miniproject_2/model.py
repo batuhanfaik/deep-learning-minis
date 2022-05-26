@@ -42,6 +42,7 @@ class Model:
         self.optimizer.load_parameters(self.model.parameters())
 
     def train(self, train_input, train_target, num_epochs: int = 25, use_wandb: bool = False) -> None:
+        torch.set_grad_enabled(False)
         print('Training...')
         # Set model in training mode
         self.model.train()
@@ -97,6 +98,7 @@ class Model:
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
+        torch.set_grad_enabled(True)
 
     def validate(self, test_input: torch.Tensor, test_target: torch.Tensor) -> float:
         print('Validating...')

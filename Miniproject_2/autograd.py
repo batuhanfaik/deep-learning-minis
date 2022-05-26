@@ -1,3 +1,4 @@
+from typing import List
 import torch
 from functools import partial
 
@@ -9,7 +10,7 @@ except:
 ATTR_INPUTS = "inputs"
 ATTR_OPERATION = "operation"
         
-def get_inputs(tensor):
+def get_inputs(tensor: torch.Tensor) -> List:
     if tensor.metadata:
         return tensor.metadata.get(ATTR_INPUTS, [])
     return []

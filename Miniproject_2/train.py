@@ -76,4 +76,4 @@ if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
     model, psnr_val = train(train_input, train_target, val_input, val_target,
-                            num_epochs=100, hidden_dim=48, wandb_name='test')
+                            num_epochs=100, hidden_dim=64, batch_size=32, validation_frequency=10, learning_rate=1e-1)

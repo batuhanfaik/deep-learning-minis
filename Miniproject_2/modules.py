@@ -156,8 +156,6 @@ class Conv2d(Module):
             bias_grad = output_grad.sum(dim=(0, 2, 3))
             accumulate_grad(self.bias, bias_grad)
 
-        del bias_grad
-
         N, C_out, H_out, W_out = output_grad.shape
         N, C_in, H_in, W_in = self.input_.shape
 
@@ -175,8 +173,6 @@ class Conv2d(Module):
         input_ = input_.transpose(1, 2).reshape(N * H_out * W_out, -1)
         weight_grad = output_grad.matmul(input_).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
-
-        del weight_grad
 
         self.input_ = None
 
@@ -256,8 +252,6 @@ class TransposeConv2d(Module):
         if self.bias is not None:
             bias_grad = output_grad.sum(dim=(0, 2, 3))
             accumulate_grad(self.bias, bias_grad)
-        
-        del bias_grad
 
         N, C_in, H_in, W_in = self.input_.shape
 
@@ -273,8 +267,6 @@ class TransposeConv2d(Module):
         input_ = self.input_.reshape(C_in, -1)
         weight_grad = input_.matmul(output_grad).reshape(self.weight.shape)
         accumulate_grad(self.weight, weight_grad)
-
-        del weight_grad
 
         self.input_ = None
 
