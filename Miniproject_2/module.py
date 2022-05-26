@@ -58,7 +58,7 @@ class Module(object):
         self._training = False
     
     def zero_grad(self):
-        for parameter in self._parameters:
+        for parameter in self.parameters():
             zero_grad(parameter)
         
     def state_dict(self):
