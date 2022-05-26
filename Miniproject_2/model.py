@@ -12,16 +12,16 @@ except:
 
 
 class Model:
-    def __init__(self, learning_rate: float = 1e-3) -> None:
+    def __init__(self, learning_rate: float = 1e-3, hidden_dim=16) -> None:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = Sequential(
-            Conv2d(3, 64, 3, stride=2),
+            Conv2d(3, hidden_dim, 3, stride=2),
             ReLU(),
-            Conv2d(64, 64, 3, stride=2),
+            Conv2d(hidden_dim, hidden_dim, 3, stride=2),
             ReLU(),
-            Upsampling(64, 64, 3, stride=2),
+            Upsampling(hidden_dim, hidden_dim, 3, stride=2),
             ReLU(),
-            Upsampling(64, 3, 4, stride=2),
+            Upsampling(hidden_dim, 3, 4, stride=2),
             Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
@@ -41,21 +41,24 @@ class Model:
         self.model = self.model.to(self.device)
         self.optimizer.load_parameters(self.model.parameters())
 
-    def train(self, train_input, train_target, num_epochs: int = 25) -> None:
+    def train(self, train_input, train_target, num_epochs: int = 25, use_wandb: bool = False) -> None:
         print('Training...')
         # Set model in training mode
         self.model.train()
+
+        if use_wandb:
+            import wandb
 
         # If input is ByteTensor, convert to FloatTensor
         train_input = self.__check_input_type(train_input)
         train_target = self.__check_input_type(train_target)
 
         # Training loop
-        loss_history = []
-        running_loss = 0.0
         start_time = time.time()
+        num_batches = len(train_input) / self.batch_size
 
         for epoch in range(num_epochs):
+            running_loss = 0.0
             print(f'Epoch {epoch + 1} / {num_epochs}')
             # Minibatch loop
             for batch_idx in range(0, len(train_input), self.batch_size):
@@ -76,15 +79,21 @@ class Model:
                 # Update parameters
                 self.optimizer.step()
             # Append loss to history
-            loss_history.append(running_loss / (len(train_input) / self.batch_size))
-            running_loss = 0.0
+            train_loss = running_loss / num_batches
             # Print loss
-            print(f'\tLoss: {loss_history[-1]:.6f}')
+            print(f'\tLoss: {train_loss:.6f}')
+
+            if use_wandb:
+                wandb.log({'train_loss': train_loss})
+
             # Validate if validation frequency is set, which requires a validation set
             if self.validate_every:
                 if epoch % self.validate_every == self.validate_every - 1:
-                    loss = self.validate(self.val_input, self.val_target)
-                    print(f'\tValidation loss: {loss:.6f}')
+                    val_loss = self.validate(self.val_input, self.val_target)
+                    print(f'\tValidation loss: {val_loss:.6f}')
+
+                    if use_wandb:
+                        wandb.log({'val_loss': val_loss})
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
@@ -99,20 +108,19 @@ class Model:
         # Validation loop
         running_loss = 0.0
 
-        with torch.no_grad():
-            for batch_idx in range(0, len(test_input), self.batch_size):
-                # Get minibatch
-                batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
-                    self.device)
-                batch_target = test_target[batch_idx:batch_idx + self.batch_size].to(
-                    self.device)
-                # Forward pass
-                output = self.model(batch_input)
-                # Compute loss
-                loss = self.criterion(output, batch_target)
-                running_loss += loss.item()
-            # Return loss
-            return running_loss / (len(test_input) / self.batch_size)
+        for batch_idx in range(0, len(test_input), self.batch_size):
+            # Get minibatch
+            batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
+                self.device)
+            batch_target = test_target[batch_idx:batch_idx + self.batch_size].to(
+                self.device)
+            # Forward pass
+            output = self.model(batch_input)
+            # Compute loss
+            loss = self.criterion(output, batch_target)
+            running_loss += loss.item()
+        # Return loss
+        return running_loss / (len(test_input) / self.batch_size)
 
     def predict(self, test_input) -> torch.Tensor:
         # Set model in evaluation mode
@@ -121,17 +129,16 @@ class Model:
         test_input = self.__check_input_type(test_input)
         denoised_output = torch.empty(test_input.shape, dtype=torch.uint8).to(self.device)
 
-        with torch.no_grad():
-            for batch_idx in range(0, len(test_input), self.batch_size):
-                # Get minibatch
-                batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
-                    self.device)
-                # Forward pass
-                output = self.model(batch_input) * 255
-                # Clip output to [0, 255]
-                output = torch.clamp(output, 0, 255)
-                # Save output
-                denoised_output[batch_idx:batch_idx + self.batch_size] = output
+        for batch_idx in range(0, len(test_input), self.batch_size):
+            # Get minibatch
+            batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
+                self.device)
+            # Forward pass
+            output = self.model(batch_input) * 255
+            # Clip output to [0, 255]
+            output = torch.clamp(output, 0, 255)
+            # Save output
+            denoised_output[batch_idx:batch_idx + self.batch_size] = output
 
         return denoised_output
 
