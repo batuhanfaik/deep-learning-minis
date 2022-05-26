@@ -112,7 +112,7 @@ class Model:
                     loss = self.validate(self.val_input, self.val_target)
                     print(f'\tValidation loss: {loss:.6f}')
                     if use_wandb:
-                        wandb.log({"val_loss": loss.item()})
+                        wandb.log({"val_loss": loss})
                     self.scheduler.step(loss)
                     # Save model if validation loss is lower than the best model
                     if loss < self.best_model['loss']:

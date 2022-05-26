@@ -85,7 +85,7 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100, batc
 if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
-    model, psnr_val = train(train_input, train_target, val_input, val_target, use_augmentation=False, wandb_name="test")
+    model, psnr_val = train(train_input, train_target, val_input, val_target, num_epochs=2, use_augmentation=False, wandb_name="test")
     # TODO: find best model
     # Save best model
     best_psnr = 25
