@@ -93,26 +93,19 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
 
 
 if __name__ == '__main__':
-    # hyperparams = {
-    #     'num_epochs': [50, 100, 150],
-    #     'batch_size': [32, 64, 128],
-    #     'shuffle_data': [True, False],
-    #     'use_augmentation': [True, False],
-    #     'learning_rate': [1e-2, 1e-3, 1e-4],
-    # }
     hyperparams = {
-        'num_epochs': [2, 5, 3],
-        'batch_size': [64],
-        'shuffle_data': [True],
-        'use_augmentation': [True],
-        'learning_rate': [1e-3],
+        'num_epochs': [50, 100, 150],
+        'batch_size': [32, 64, 128],
+        'shuffle_data': [True, False],
+        'use_augmentation': [True, False],
+        'learning_rate': [1e-2, 1e-3, 1e-4],
     }
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
 
     # For all hyperparameter combinations
-    test_name = 'bestrun'
-    best_psnr = 25.4
+    test_name = 'hyperparam_search'
+    best_psnr = 25.66
 
     keys = hyperparams.keys()
     values = (hyperparams[key] for key in keys)
