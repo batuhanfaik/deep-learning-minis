@@ -27,7 +27,7 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
                                     map_location=device)
     else:
         raise ValueError(f'Unknown data type {mode}')
-    return source.float() / 255.0, target.float() / 255.0
+    return source.float(), target.float()
 
 
 def get_dataloaders(batch_size: int, shuffle: bool = True) -> \
