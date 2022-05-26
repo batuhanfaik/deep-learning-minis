@@ -119,7 +119,7 @@ class Model:
         self.model.eval()
         # Predict on minibatches
         test_input = self.__check_input_type(test_input)
-        denoised_output = torch.empty(test_input.shape).to(self.device)
+        denoised_output = torch.empty(test_input.shape, dtype=torch.uint8).to(self.device)
 
         with torch.no_grad():
             for batch_idx in range(0, len(test_input), self.batch_size):
@@ -127,9 +127,9 @@ class Model:
                 batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
                     self.device)
                 # Forward pass
-                output = self.model(batch_input) * 255.0
+                output = self.model(batch_input) * 255
                 # Clip output to [0, 255]
-                output = torch.clamp(output, 0, 255.0)
+                output = torch.clamp(output, 0, 255)
                 # Save output
                 denoised_output[batch_idx:batch_idx + self.batch_size] = output
 
