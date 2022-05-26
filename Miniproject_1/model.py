@@ -2,16 +2,18 @@ from typing import Union
 from pathlib import Path
 
 try:
-    from .utils.gora import GORA
+    from .utils import GORA
+    from .utils import AugmentedDataset
 except:
-    from utils.gora import GORA
+    from utils import GORA
+    from utils import AugmentedDataset
 
 import torch
 import time
 
 
 class Model:
-    def __init__(self, learning_rate=1e-3) -> None:
+    def __init__(self) -> None:
         """
         Initialize model
             device: Device to use
@@ -27,7 +29,7 @@ class Model:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = GORA().to(self.device)
         # Set the parameters
-        self.optimizer = self.__get_optimizer(lr=learning_rate)
+        self.optimizer = self.__get_optimizer()
         self.scheduler = self.__get_scheduler(factor=0.5)
         self.loss_fn = self.__get_loss_fn().to(self.device)
         self.batch_size = 64
@@ -239,6 +241,14 @@ class Model:
         if isinstance(tensor_input, (torch.ByteTensor, torch.cuda.ByteTensor)):
             return tensor_input.float()
         return tensor_input
+
+    def set_learning_rate(self, lr: float):
+        """
+        Set learning rate
+        lr: Learning rate
+        """
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
 
     def set_batch_size(self, batch_size: int) -> None:
         """

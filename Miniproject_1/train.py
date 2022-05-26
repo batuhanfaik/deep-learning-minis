@@ -64,7 +64,8 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
                            "use_augmentation": use_augmentation,
                            "learning_rate": learning_rate})
 
-    model = Model(learning_rate=learning_rate)
+    model = Model()
+    model.set_learning_rate(learning_rate)
     model.set_batch_size(batch_size)
     # OPTIONAL: Set the validation data and frequency
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
@@ -93,7 +94,8 @@ if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
     model, psnr_val = train(train_input, train_target, val_input, val_target,
-                            num_epochs=2, use_augmentation=True, wandb_name="test")
+                            num_epochs=250, use_augmentation=True,
+                            wandb_name='batuhanfaik')
     # Save best model
     best_psnr = 25.4
     if psnr_val > best_psnr:
