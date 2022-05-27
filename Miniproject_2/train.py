@@ -32,7 +32,7 @@ def get_data(data_path: str = DATA_PATH, mode: str = 'train',
 
 def train(train_input, train_target, val_input, val_target, num_epochs=100,
           batch_size=64, validation_frequency=1, shuffle_data=True,
-          learning_rate=1e-2, wandb_name=None, hidden_dim=16):
+          learning_rate=1e-2, wandb_name=None, hidden_dim=16, no_padding=False):
     if shuffle_data:
         train_rand_permutation = torch.randperm(train_input.shape[0])
         val_rand_permutation = torch.randperm(val_input.shape[0])
@@ -49,7 +49,7 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
                            "shuffle_data": shuffle_data,
                            "learning_rate": learning_rate})
 
-    model = Model(learning_rate=learning_rate, hidden_dim=hidden_dim)
+    model = Model(learning_rate=learning_rate, hidden_dim=hidden_dim, no_padding=no_padding)
     model.set_batch_size(batch_size)
     # OPTIONAL: Set the validation data and frequency
     model.set_val_data(val_input, val_target, validation_frequency=validation_frequency)
@@ -90,19 +90,25 @@ def bulk_train():
 
     for batch_param in batch_params:
         train(train_input, train_target, val_input, val_target,
-              num_epochs=50, validation_frequency=1, learning_rate=1e-1, hidden_dim=64, batch_size=batch_param, wandb_name=f"batch_{batch_param}")
+              num_epochs=50, validation_frequency=1, learning_rate=1e-1, hidden_dim=64,
+              batch_size=batch_param, wandb_name=f"batch_{batch_param}", no_padding=True)
 
     for dim_param in dim_params:
         train(train_input, train_target, val_input, val_target,
-              num_epochs=50, validation_frequency=1, learning_rate=1e-1, batch_size=64, hidden_dim=dim_param, wandb_name=f"channel_{dim_param}")
+              num_epochs=50, validation_frequency=1, learning_rate=1e-1, batch_size=64, hidden_dim=dim_param,
+              wandb_name=f"channel_{dim_param}", no_padding=True)
 
     for lr_param in learning_params:
         train(train_input, train_target, val_input, val_target,
-              num_epochs=50, validation_frequency=1, batch_size=64, hidden_dim=64, learning_rate=lr_param, wandb_name=f"lr_{lr_param}")
+              num_epochs=50, validation_frequency=1, batch_size=64, hidden_dim=64, learning_rate=lr_param,
+              wandb_name=f"lr_{lr_param}", no_padding=True)
 
 
 if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
-    train(train_input, train_target, val_input, val_target,
-          num_epochs=3, validation_frequency=1, learning_rate=1e-1, hidden_dim=64, batch_size=64)
+    model, psnr = train(train_input, train_target, val_input, val_target,
+                        num_epochs=100, validation_frequency=10, learning_rate=1e-1,
+                        hidden_dim=64, batch_size=16)
+    model.save_pretrained_model(OUTPUT_MODEL_PATH)
+    print(f'Saved model to `{OUTPUT_MODEL_PATH}`')

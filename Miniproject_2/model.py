@@ -12,23 +12,37 @@ except:
 
 
 class Model:
-    def __init__(self, learning_rate: float = 1e-3, hidden_dim: int = 16) -> None:
+    def __init__(self, learning_rate: float = 1e-3, hidden_dim: int = 16, no_padding: bool = False) -> None:
         """Initialize denoising model.
 
         Args:
             learning_rate (float, optional): Learning rate for optimizer. Defaults to 1e-3.
             hidden_dim (int, optional): Hidden channel size. Defaults to 16.
+            no_padding (bool, optional): Whether to not apply padding. Defaults to False.
         """
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = Sequential(
-            Conv2d(3, hidden_dim, 3, stride=2),
-            ReLU(),
-            Conv2d(hidden_dim, hidden_dim, 3, stride=2),
-            ReLU(),
-            Upsampling(hidden_dim, hidden_dim, 3, stride=2),
-            ReLU(),
-            Upsampling(hidden_dim, 3, 4, stride=2),
-            Sigmoid()).to(self.device)
+
+        if no_padding:
+            self.model = Sequential(
+                Conv2d(3, hidden_dim, 3, stride=2),
+                ReLU(),
+                Conv2d(hidden_dim, hidden_dim, 3, stride=2),
+                ReLU(),
+                Upsampling(hidden_dim, hidden_dim, 3, stride=2),
+                ReLU(),
+                Upsampling(hidden_dim, 3, 4, stride=2),
+                Sigmoid()).to(self.device)  
+        else:
+            # our best model arch
+            self.model = Sequential(
+                Conv2d(3, hidden_dim, 3, stride=2, padding=1),
+                ReLU(),
+                Conv2d(hidden_dim, hidden_dim, 3, stride=2, padding=1),
+                ReLU(),
+                Upsampling(hidden_dim, hidden_dim, 2, stride=2),
+                ReLU(),
+                Upsampling(hidden_dim, 3, 2, stride=2),
+                Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()
         self.validate_every = 0
