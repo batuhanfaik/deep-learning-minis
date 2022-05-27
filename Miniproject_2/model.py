@@ -132,6 +132,7 @@ class Model:
 
     def validate(self, test_input: torch.Tensor, test_target: torch.Tensor) -> float:
         print('Validating...')
+        torch.set_grad_enabled(False)
 
         # Set model in evaluation mode
         self.model.eval()
@@ -157,10 +158,13 @@ class Model:
         # Set model back in training mode
         self.model.train()
 
+        torch.set_grad_enabled(True)
+
         # Return loss
         return running_loss / (len(test_input) / self.batch_size)
 
     def predict(self, test_input) -> torch.Tensor:
+        torch.set_grad_enabled(False)
         # Set model in evaluation mode
         self.model.eval()
 
@@ -181,6 +185,7 @@ class Model:
 
         self.model.train()
 
+        torch.set_grad_enabled(True)
         return denoised_output
 
     def set_batch_size(self, batch_size: int) -> None:
