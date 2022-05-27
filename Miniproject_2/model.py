@@ -12,7 +12,13 @@ except:
 
 
 class Model:
-    def __init__(self, learning_rate: float = 1e-3, hidden_dim=16) -> None:
+    def __init__(self, learning_rate: float = 1e-3, hidden_dim: int = 16) -> None:
+        """Initialize denoising model.
+
+        Args:
+            learning_rate (float, optional): Learning rate for optimizer. Defaults to 1e-3.
+            hidden_dim (int, optional): Hidden channel size. Defaults to 16.
+        """
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = Sequential(
             Conv2d(3, hidden_dim, 3, stride=2),
@@ -29,11 +35,21 @@ class Model:
         self.batch_size = 64
 
     def save_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
+        """Saves pretrained model to specified path.
+
+        Args:
+            ckpt_name (str, optional): Checkpoint path to save to. Defaults to Path(__file__).parent/'bestmodel.pth'.
+        """
         model = self.model.to(torch.device("cpu"))
         with open(ckpt_name, "wb") as ckpt_f:
             pickle.dump(model.state_dict(), ckpt_f)
 
     def load_pretrained_model(self, ckpt_name: str = Path(__file__).parent / 'bestmodel.pth') -> None:
+        """Loads pretrained model from specified path.
+
+        Args:
+            ckpt_name (str, optional): Checkpoint path to load from. Defaults to Path(__file__).parent/'bestmodel.pth'.
+        """
         print(f'Loading pretrained model from {ckpt_name}')
         with open(ckpt_name, "rb") as ckpt_f:
             ckpt = pickle.load(ckpt_f)
@@ -42,8 +58,19 @@ class Model:
         self.optimizer.load_parameters(self.model.parameters())
 
     def train(self, train_input, train_target, num_epochs: int = 25, use_wandb: bool = False) -> None:
+        """Trains a model and validates if necessary.
+
+        Args:
+            train_input (_type_): Train set
+            train_target (_type_): Train target
+            num_epochs (int, optional): Number of epochs. Defaults to 25.
+            use_wandb (bool, optional): Whether to use wandb for logging. Defaults to False.
+        """
+        # Need to do this for memory optimization purposes.
+        # Otherwise torch also builds the computation graph and this quickly fills up memory
         torch.set_grad_enabled(False)
         print('Training...')
+
         # Set model in training mode
         self.model.train()
 
@@ -54,10 +81,10 @@ class Model:
         train_input = self.__check_input_type(train_input)
         train_target = self.__check_input_type(train_target)
 
-        # Training loop
         start_time = time.time()
         num_batches = len(train_input) / self.batch_size
 
+        # Training loop
         for epoch in range(num_epochs):
             running_loss = 0.0
             print(f'Epoch {epoch + 1} / {num_epochs}')
@@ -79,9 +106,10 @@ class Model:
                 loss.backward()
                 # Update parameters
                 self.optimizer.step()
-            # Append loss to history
+
+            # Compute average batch loss
             train_loss = running_loss / num_batches
-            # Print loss
+
             print(f'\tLoss: {train_loss:.6f}')
 
             if use_wandb:
@@ -98,18 +126,22 @@ class Model:
 
         end_time = time.time()
         print(f'Training time: {end_time - start_time:.2f}s')
+
+        # We set this back for consistency
         torch.set_grad_enabled(True)
 
     def validate(self, test_input: torch.Tensor, test_target: torch.Tensor) -> float:
         print('Validating...')
+
         # Set model in evaluation mode
         self.model.eval()
+
         # If input is ByteTensor, convert to FloatTensor
         test_input = self.__check_input_type(test_input)
         test_target = self.__check_input_type(test_target)
-        # Validation loop
         running_loss = 0.0
 
+        # Validation loop
         for batch_idx in range(0, len(test_input), self.batch_size):
             # Get minibatch
             batch_input = test_input[batch_idx:batch_idx + self.batch_size].to(
@@ -121,13 +153,17 @@ class Model:
             # Compute loss
             loss = self.criterion(output, batch_target)
             running_loss += loss.item()
+
+        # Set model back in training mode
         self.model.train()
+
         # Return loss
         return running_loss / (len(test_input) / self.batch_size)
 
     def predict(self, test_input) -> torch.Tensor:
         # Set model in evaluation mode
         self.model.eval()
+
         # Predict on minibatches
         test_input = self.__check_input_type(test_input)
         denoised_output = torch.empty(test_input.shape, dtype=torch.uint8).to(self.device)
@@ -142,6 +178,8 @@ class Model:
             output = torch.clamp(output, 0, 255)
             # Save output
             denoised_output[batch_idx:batch_idx + self.batch_size] = output
+
+        self.model.train()
 
         return denoised_output
 

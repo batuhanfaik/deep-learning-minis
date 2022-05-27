@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any, Optional, Union
 import torch
 from functools import partial
 
@@ -11,16 +11,40 @@ ATTR_INPUTS = "inputs"
 ATTR_OPERATION = "operation"
         
 def get_inputs(tensor: torch.Tensor) -> List:
+    """Get input tensors used to compute the given tensor.
+
+    Args:
+        tensor (torch.Tensor): Tensor
+
+    Returns:
+        List: List of input tensors
+    """
     if tensor.metadata:
         return tensor.metadata.get(ATTR_INPUTS, [])
     return []
 
-def get_operation(tensor):
+def get_operation(tensor: torch.Tensor) -> Any:
+    """Get the operation object used to compute the
+    given tensor.
+
+    Args:
+        tensor (torch.Tensor): Tensor
+
+    Returns:
+        Any: Operation object
+    """
     if tensor.metadata:
         return tensor.metadata.get(ATTR_OPERATION)
     return None
 
-def backward(tensor, *gradients, **kwargs):
+def backward(tensor: torch.Tensor, *gradients, **kwargs) -> None:
+    """Perform backward propagation from the given tensor.
+    It recursively walks the computation graph and 
+    calls backward operation on each tensor in the graph.
+
+    Args:
+        tensor (torch.Tensor): Tensor
+    """
     gradient = get_gradient(gradients)
     operation = get_operation(tensor)
 
@@ -36,7 +60,20 @@ def backward(tensor, *gradients, **kwargs):
     tensor.metadata = {ATTR_OPERATION: None, ATTR_INPUTS: []}
     tensor.backward = None
             
-def autograd_tensor(tensor, operation=None, inputs=None):
+def autograd_tensor(tensor: torch.Tensor, operation: Any = None,
+                    inputs: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None) -> torch.Tensor:
+    """Construct an automatically differentiable tensor.
+    This function registers the inputs and the operation with the given
+    tensor to build the computation graph.
+
+    Args:
+        tensor (torch.Tensor): Tensor
+        operation (Any, optional): Operation used to compute the tensor. Defaults to None.
+        inputs (Optional[Union[torch.Tensor, List[torch.Tensor]]], optional): Inputs used for this tensor. Defaults to None.
+
+    Returns:
+        torch.Tensor: Autograd enabled tensor 
+    """
     if inputs is None:
         inputs = []
     
@@ -51,10 +88,24 @@ def autograd_tensor(tensor, operation=None, inputs=None):
 
     return tensor
 
-def accumulate_grad(tensor, grad) -> torch.Tensor:
+def accumulate_grad(tensor: torch.Tensor, grad: torch.Tensor) -> torch.Tensor:
+    """Accumulate gradient in the tensor.
+
+    Args:
+        tensor (torch.Tensor): Tensor
+        grad (torch.Tensor): Tensor gradient
+
+    Returns:
+        torch.Tensor: Accumulated tensor gradient
+    """
     if tensor.requires_grad:
         tensor.grad = tensor.grad + grad
     return tensor.grad
 
-def zero_grad(tensor) -> None:
+def zero_grad(tensor: torch.Tensor) -> None:
+    """Zero out tensor gradients
+
+    Args:
+        tensor (torch.Tensor): Tensor
+    """
     tensor.grad.zero_()

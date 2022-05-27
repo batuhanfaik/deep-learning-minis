@@ -49,10 +49,17 @@ class Sequential(Module):
 
 class Linear(Module):
     def __init__(self, in_dim: int, out_dim: int, bias: bool = True) -> None:
+        """Initialize linear module
+
+        Args:
+            in_dim (int): Input dimension
+            out_dim (int): Output dimension
+            bias (bool, optional): Whether to add bias. Defaults to True.
+        """
         super().__init__('Linear')
         self.in_dim = in_dim
         self.out_dim = out_dim
-        # TODO: implement Xavier initialization
+        # TODO: Bad initialization. Implement Xavier initialization
         self.weight = Parameter(torch.empty((out_dim, in_dim)))
         self.bias = Parameter(torch.empty(out_dim)) if bias else None
         self.input_ = None
@@ -89,7 +96,19 @@ class Linear(Module):
 class Conv2d(Module):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple],
                  stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
-                 groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1, padding_mode: str = 'zeros') -> None:
+                 groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1) -> None:
+        """Initialize a Convolution layer
+
+        Args:
+            in_channels (int): Input channels
+            out_channels (int): Output channels
+            kernel_size (Union[int, Tuple]): Kernel size
+            stride (Union[int, Tuple], optional): Stride. Defaults to 1.
+            padding (Union[int, Tuple], optional): Padding. Defaults to 0.
+            groups (int, optional): Groups. Defaults to 1.
+            bias (bool, optional): Bias. Defaults to True.
+            dilation (Union[int, Tuple], optional): Dilation. Defaults to 1.
+        """
         super().__init__("Conv2d")
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
             isinstance(kernel_size, int)
@@ -121,7 +140,6 @@ class Conv2d(Module):
         self.padding = padding
         self.stride = stride
         self.dilation = dilation
-        self.padding_mode = padding_mode
         self.groups = groups
         self.weight = Parameter(
             self.init_weights((self.out_channels, self.in_channels // self.groups,
@@ -152,6 +170,7 @@ class Conv2d(Module):
     def backward(self, *gradwrtoutput):
         output_grad = get_gradient(gradwrtoutput)
 
+        # Compute bias gradient
         if self.bias is not None:
             bias_grad = output_grad.sum(dim=(0, 2, 3))
             accumulate_grad(self.bias, bias_grad)
@@ -183,8 +202,19 @@ class Conv2d(Module):
 class TransposeConv2d(Module):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple],
                  stride: Union[int, Tuple] = 1, padding: Union[int, Tuple] = 0,
-                 groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1,
-                 padding_mode: str = 'zeros') -> None:
+                 groups: int = 1, bias: bool = True, dilation: Union[int, Tuple] = 1) -> None:
+        """Initialize Transpose Convolution layer
+
+        Args:
+            in_channels (int): Input channels
+            out_channels (int): Output channels
+            kernel_size (Union[int, Tuple]): Kernel size
+            stride (Union[int, Tuple], optional): Stride. Defaults to 1.
+            padding (Union[int, Tuple], optional): Padding. Defaults to 0.
+            groups (int, optional): Groups. Defaults to 1.
+            bias (bool, optional): Bias. Defaults to True.
+            dilation (Union[int, Tuple], optional): Dilation. Defaults to 1.
+        """
         super().__init__('TransposeConv2d')
         assert len(kernel_size) == 2 if isinstance(kernel_size, tuple) else \
             isinstance(kernel_size, int)
@@ -221,7 +251,6 @@ class TransposeConv2d(Module):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
-        self.padding_mode = padding_mode
         self.input_ = None
         self.register_parameter("weight", self.weight)
         self.register_parameter("bias", self.bias)
@@ -325,6 +354,12 @@ class Sigmoid(Module):
 
 class MSE(Module):
     def __init__(self, reduction: str = "mean") -> None:
+        """Mean Squared Loss module
+
+        Args:
+            reduction (str, optional): Type of reduction to apply to loss. Defaults to "mean".
+                Accepted values ["mean", "sum"].
+        """
         super().__init__("MSE")
         self.reduction = reduction
         self.input_ = None
@@ -371,6 +406,14 @@ class MaxPool2d(Module):
                  stride: Optional[Union[int, Tuple]] = None,
                  padding: Union[int, Tuple] = 0,
                  dilation: Union[int, Tuple] = 1) -> None:
+        """Initialize Max Pooling layer
+
+        Args:
+            kernel_size (Union[int, Tuple]): Kernel size
+            stride (Optional[Union[int, Tuple]], optional): Stride. Defaults to None.
+            padding (Union[int, Tuple], optional): Padding. Defaults to 0.
+            dilation (Union[int, Tuple], optional): Dilation. Defaults to 1.
+        """
         super().__init__("MaxPool2d")
         self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size,
                                                                     int) else kernel_size
@@ -401,6 +444,7 @@ class MaxPool2d(Module):
         input_grads = []
         N, C, H_in, W_in = self.input_.shape
 
+        # Since channels are independent, we perform it separately
         for ch in range(C):
             input_unfolded = unfold(self.input_[:, ch, :, :].unsqueeze(1),
                                   kernel_size=self.kernel_size,
