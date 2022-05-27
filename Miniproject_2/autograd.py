@@ -54,7 +54,7 @@ def backward(tensor: torch.Tensor, *gradients, **kwargs) -> None:
     inputs = get_inputs(tensor)
 
     for input_ in inputs:
-        if input_.requires_grad:
+        if hasattr(input_, "grad_required") and input_.grad_required:
             input_.backward(gradient)
     
     tensor.metadata = {ATTR_OPERATION: None, ATTR_INPUTS: []}
@@ -80,8 +80,7 @@ def autograd_tensor(tensor: torch.Tensor, operation: Any = None,
     if isinstance(inputs, torch.Tensor):
         inputs = [inputs]
     
-    if not tensor.requires_grad:
-        tensor.requires_grad = True
+    tensor.grad_required = True
 
     tensor.metadata = {ATTR_OPERATION: operation, ATTR_INPUTS: inputs}
     tensor.backward = partial(backward, tensor)
@@ -98,9 +97,9 @@ def accumulate_grad(tensor: torch.Tensor, grad: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: Accumulated tensor gradient
     """
-    if tensor.requires_grad:
-        tensor.grad = tensor.grad + grad
-    return tensor.grad
+    if tensor.grad_required:
+        tensor.gradient = tensor.gradient + grad
+    return tensor.gradient
 
 def zero_grad(tensor: torch.Tensor) -> None:
     """Zero out tensor gradients
@@ -108,4 +107,4 @@ def zero_grad(tensor: torch.Tensor) -> None:
     Args:
         tensor (torch.Tensor): Tensor
     """
-    tensor.grad.zero_()
+    tensor.gradient.zero_()

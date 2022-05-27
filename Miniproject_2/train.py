@@ -3,6 +3,7 @@ from pathlib import Path
 
 import torch
 import os
+from uuid import uuid4
 
 from utils import psnr
 from model import Model
@@ -66,7 +67,11 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
         wandb.log({"PSNR": psnr_val})
 
     # Save the best model
-    model_path = str(Path(__file__).parent / f'bestmodel_{wandb_name}.pth')
+    if wandb_name:
+        model_path = str(Path(__file__).parent / f'bestmodel_{wandb_name}.pth')
+    else:
+        model_path = str(Path(__file__).parent / f'bestmodel_{uuid4().hex[:8]}.pth')
+
     model.save_pretrained_model(model_path)
     print(f'Saved model to `{model_path}`')
 
@@ -76,7 +81,7 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
     return model, psnr_val
 
 
-if __name__ == '__main__':
+def bulk_train():
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
     batch_params = [32, 64, 128, 512]
@@ -94,3 +99,10 @@ if __name__ == '__main__':
     for lr_param in learning_params:
         train(train_input, train_target, val_input, val_target,
               num_epochs=50, validation_frequency=1, batch_size=64, hidden_dim=64, learning_rate=lr_param, wandb_name=f"lr_{lr_param}")
+
+
+if __name__ == '__main__':
+    train_input, train_target = get_data(mode='train', device=DEVICE)
+    val_input, val_target = get_data(mode='val', device=DEVICE)
+    train(train_input, train_target, val_input, val_target,
+          num_epochs=3, validation_frequency=1, learning_rate=1e-1, hidden_dim=64, batch_size=64)

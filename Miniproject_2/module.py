@@ -192,11 +192,11 @@ class Module(object):
         
         for name, parameter in self.named_parameters():
             parameter.data = parameter.data.to(device)
-            parameter.grad = parameter.grad.to(device)
+            parameter.gradient = parameter.gradient.to(device)
             setattr(self, name, parameter)
             self.register_parameter(name, parameter)
 
         return self
     
     def param(self):
-        return [(parameter, parameter.grad) for parameter in self.parameters()]
+        return [(parameter, parameter.gradient) for parameter in self.parameters()]

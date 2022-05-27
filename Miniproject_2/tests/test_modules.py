@@ -32,11 +32,11 @@ class TestModules(unittest.TestCase):
         torch.autograd.backward(torch_out, torch.ones_like(torch_out))
         grad = linear.backward(torch.ones_like(out))
         self.assertEqual(x.grad.shape, grad.shape)
-        self.assertEqual(torch_linear.weight.grad.shape, linear.weight.grad.shape)
-        self.assertEqual(torch_linear.bias.grad.shape, linear.bias.grad.shape)
+        self.assertEqual(torch_linear.weight.grad.shape, linear.weight.gradient.shape)
+        self.assertEqual(torch_linear.bias.grad.shape, linear.bias.gradient.shape)
         self.assertTrue(torch.allclose(x.grad, grad))
-        self.assertTrue(torch.allclose(torch_linear.weight.grad, linear.weight.grad))
-        self.assertTrue(torch.allclose(torch_linear.bias.grad, linear.bias.grad))
+        self.assertTrue(torch.allclose(torch_linear.weight.grad, linear.weight.gradient))
+        self.assertTrue(torch.allclose(torch_linear.bias.grad, linear.bias.gradient))
 
     def test_conv2d(self):
         # Create a 1x1x3x3 input tensor
