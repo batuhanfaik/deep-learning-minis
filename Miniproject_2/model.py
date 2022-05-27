@@ -39,9 +39,9 @@ class Model:
                 ReLU(),
                 Conv2d(hidden_dim, hidden_dim, 3, stride=2, padding=1),
                 ReLU(),
-                Upsampling(hidden_dim, hidden_dim, 2, stride=2),
+                Upsampling(hidden_dim, hidden_dim, 4, stride=2, padding=1),
                 ReLU(),
-                Upsampling(hidden_dim, 3, 2, stride=2),
+                Upsampling(hidden_dim, 3, 4, stride=2, padding=1),
                 Sigmoid()).to(self.device)
         self.optimizer = SGD(self.model.parameters(), lr=learning_rate)
         self.criterion = MSE()

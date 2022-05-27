@@ -85,7 +85,7 @@ def bulk_train():
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
     batch_params = [32, 64, 128, 512]
-    dim_params = [16, 32, 64, 128]
+    dim_params = [24, 48, 96, 144]
     learning_params = [1e-1, 1e-2, 1e-3]
 
     for batch_param in batch_params:
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
     model, psnr = train(train_input, train_target, val_input, val_target,
-                        num_epochs=100, validation_frequency=10, learning_rate=1e-1,
-                        hidden_dim=64, batch_size=16)
+                        num_epochs=100, validation_frequency=1, learning_rate=1e-1,
+                        hidden_dim=144, batch_size=16, wandb_name="final")
     model.save_pretrained_model(OUTPUT_MODEL_PATH)
     print(f'Saved model to `{OUTPUT_MODEL_PATH}`')
