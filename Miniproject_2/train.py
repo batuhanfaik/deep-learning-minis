@@ -69,11 +69,28 @@ def train(train_input, train_target, val_input, val_target, num_epochs=100,
     model_path = str(Path(__file__).parent / f'bestmodel_{wandb_name}.pth')
     model.save_pretrained_model(model_path)
     print(f'Saved model to `{model_path}`')
+
+    if wandb_name is not None:
+        wandb.finish()
+
     return model, psnr_val
 
 
 if __name__ == '__main__':
     train_input, train_target = get_data(mode='train', device=DEVICE)
     val_input, val_target = get_data(mode='val', device=DEVICE)
-    model, psnr_val = train(train_input, train_target, val_input, val_target,
-                            num_epochs=100, hidden_dim=64, batch_size=64, validation_frequency=10, learning_rate=1e-1)
+    batch_params = [32, 64, 128, 512]
+    dim_params = [16, 32, 64, 128]
+    learning_params = [1e-1, 1e-2, 1e-3]
+
+    for batch_param in batch_params:
+        train(train_input, train_target, val_input, val_target,
+              num_epochs=50, validation_frequency=1, learning_rate=1e-1, hidden_dim=64, batch_size=batch_param, wandb_name=f"batch_{batch_param}")
+
+    for dim_param in dim_params:
+        train(train_input, train_target, val_input, val_target,
+              num_epochs=50, validation_frequency=1, learning_rate=1e-1, batch_size=64, hidden_dim=dim_param, wandb_name=f"channel_{dim_param}")
+
+    for lr_param in learning_params:
+        train(train_input, train_target, val_input, val_target,
+              num_epochs=50, validation_frequency=1, batch_size=64, hidden_dim=64, learning_rate=lr_param, wandb_name=f"lr_{lr_param}")
