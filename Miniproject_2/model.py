@@ -193,7 +193,7 @@ class Model:
             # Forward pass
             output = self.model(batch_input) * 255
             # Clip output to [0, 255]
-            output = torch.clamp(output, 0, 255)
+            output = output.clamp(0, 255)
             # Save output
             denoised_output[batch_idx:batch_idx + self.batch_size] = output
 
