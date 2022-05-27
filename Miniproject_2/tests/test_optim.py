@@ -38,7 +38,7 @@ class TestOptim(unittest.TestCase):
         torch_loss.backward()
         torch_optimizer.step()
 
-        self.assertEqual(torch_linear1.weight.grad.shape, linear1.weight.grad.shape)
-        self.assertEqual(torch_linear1.bias.grad.shape, linear1.bias.grad.shape)
-        self.assertTrue(torch.allclose(torch_linear1.weight.grad, linear1.weight.grad))
-        self.assertTrue(torch.allclose(torch_linear1.bias.grad, linear1.bias.grad))
+        self.assertEqual(torch_linear1.weight.grad.shape, linear1.weight.gradient.shape)
+        self.assertEqual(torch_linear1.bias.grad.shape, linear1.bias.gradient.shape)
+        self.assertTrue(torch.allclose(torch_linear1.weight.grad, linear1.weight.gradient))
+        self.assertTrue(torch.allclose(torch_linear1.bias.grad, linear1.bias.gradient))

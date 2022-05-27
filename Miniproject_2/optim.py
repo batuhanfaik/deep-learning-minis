@@ -33,4 +33,4 @@ class SGD(Optimizer):
         
     def step(self):
         for parameter in self.parameters:
-            parameter.data = parameter.data - self.lr * parameter.grad
+            parameter.data = parameter.data - self.lr * parameter.gradient

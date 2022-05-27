@@ -2,11 +2,9 @@ from typing import Union
 from pathlib import Path
 
 try:
-    from .utils import GORA
-    from .utils import AugmentedDataset
+    from .utils.gora import GORA
 except:
-    from utils import GORA
-    from utils import AugmentedDataset
+    from utils.gora import GORA
 
 import torch
 import time
@@ -69,9 +67,9 @@ class Model:
         augmenter = None
         if use_augmentation:
             try:
-                from .utils import AugmentedDataset
+                from .utils.augmentation import AugmentedDataset
             except:
-                from utils import AugmentedDataset
+                from utils.augmentation import AugmentedDataset
             augmenter = self.__get_augmenter(train_input, train_target)
         # Training loop
         loss_history = []
@@ -231,6 +229,10 @@ class Model:
         target: Target data
         return: AugmentedDataset
         """
+        try:
+            from .utils.augmentation import AugmentedDataset
+        except:
+            from utils.augmentation import AugmentedDataset
         augmenter = AugmentedDataset(source, target, autotransform=True)
         return augmenter
 
